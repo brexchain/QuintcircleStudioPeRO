@@ -1,0 +1,10 @@
+{
+  "name": "QuintStudioPeRO",
+  "description": "Songwriter\u0027s Toolkit with Circle of Fifths, Chord Progressions, and Tuner.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
