@@ -55,6 +55,11 @@ interface TimelineItem {
   audioBuffer?: AudioBuffer | null;
   audioUrl?: string;
   duration?: number;
+  // Custom Songwriter Additions
+  bpmOverride?: number;
+  dynamic?: "normal" | "piano" | "forte" | "crescendo" | "decrescendo" | "break";
+  technique?: "normal" | "hold" | "break";
+  strumOverride?: "block" | "arpeggio" | "strum";
 }
 
 // Theoretical progressions DB
@@ -833,6 +838,28 @@ export default function App() {
   const [toastMsg, setToastMsg] = useState<string>("");
   const [isFooterMinimized, setIsFooterMinimized] = useState<boolean>(false);
   const [expandedSection, setExpandedSection] = useState<"navigation" | "sequencer" | "instruments" | "style" | "trash" | null>("navigation");
+  
+  // Custom Songwriter & LocalStorage States
+  const [selectedTimelineItem, setSelectedTimelineItem] = useState<TimelineItem | null>(null);
+  const [newSongName, setNewSongName] = useState<string>("");
+  const [savedSongs, setSavedSongs] = useState<any[]>(() => {
+    try {
+      const local = localStorage.getItem("jam_saved_songs");
+      return local ? JSON.parse(local) : [];
+    } catch (e) {
+      console.warn("Could not load songs from localStorage", e);
+      return [];
+    }
+  });
+
+  // Sync saved list to local storage
+  useEffect(() => {
+    try {
+      localStorage.setItem("jam_saved_songs", JSON.stringify(savedSongs));
+    } catch (e) {
+      console.warn("Could not save songs to localStorage", e);
+    }
+  }, [savedSongs]);
 
   // Guitar Pedalboard FX State
   const [pedalboard, setPedalboard] = useState({
@@ -1042,7 +1069,9 @@ export default function App() {
     const delDry = ctx.createGain();
     const delWet = ctx.createGain();
     const delNode = ctx.createDelay(2.0);
+    delNode.delayTime.setValueAtTime(0.38, ctx.currentTime);
     const delFeedback = ctx.createGain();
+    delFeedback.gain.setValueAtTime(0.3, ctx.currentTime);
 
     // 4. Reverb Nodes
     const revDry = ctx.createGain();
@@ -1163,11 +1192,13 @@ export default function App() {
     const delDry = delayDryRef.current;
     const delWet = delayWetRef.current;
     if (delNode && delFb && delDry && delWet) {
+      // Always safely update internal delay parameters to avoid 0ms delay at 1.0 feedback level feedback loops
+      delNode.delayTime.setValueAtTime(0.05 + pedalboard.delay.time * 0.95, ctx.currentTime);
+      delFb.gain.setValueAtTime(pedalboard.delay.feedback * 0.75, ctx.currentTime);
+
       if (pedalboard.delay.active) {
         delDry.gain.setValueAtTime(1.0, ctx.currentTime);
         delWet.gain.setValueAtTime(pedalboard.delay.mix * 0.85, ctx.currentTime);
-        delNode.delayTime.setValueAtTime(0.05 + pedalboard.delay.time * 0.95, ctx.currentTime);
-        delFb.gain.setValueAtTime(pedalboard.delay.feedback * 0.75, ctx.currentTime);
       } else {
         delDry.gain.setValueAtTime(1.0, ctx.currentTime);
         delWet.gain.setValueAtTime(0.0, ctx.currentTime);
@@ -2079,7 +2110,80 @@ export default function App() {
     });
   };
 
+  // Save, Load, and Delete Song helpers
+  const handleSaveSong = () => {
+    if (!timeline.length) {
+      showToast("Die Timeline ist leer! Füge Akkorde hinzu, um sie zu speichern.");
+      return;
+    }
+    const nameToUse = newSongName.trim() || `Song vom ${new Date().toLocaleDateString("de-DE")}`;
+    const newSong = {
+      id: "song_" + Date.now(),
+      name: nameToUse,
+      timeline: timeline.map(item => ({
+        ...item,
+        // Ensure audioBuffer (which is non-serializable) is discarded
+        audioBuffer: null
+      })),
+      bpm,
+      beatsPerBar,
+      currentInst,
+      strumPattern,
+      drumPattern,
+      bassPattern,
+      drumsOn,
+      basslineOn,
+      pedalboard: JSON.parse(JSON.stringify(pedalboard))
+    };
+    setSavedSongs(prev => [...prev.filter(s => s.name !== nameToUse), newSong]);
+    setNewSongName("");
+    showToast(`Song "${nameToUse}" gespeichert! 📁`);
+  };
+
+  const handleLoadSong = (song: any) => {
+    if (!song) return;
+    setSelectedTimelineItem(null);
+    clearTimeline();
+    
+    // De-serialize states
+    if (song.timeline) {
+      setTimeline(song.timeline);
+    }
+    if (song.bpm) setBpm(song.bpm);
+    if (song.beatsPerBar) setBeatsPerBar(song.beatsPerBar);
+    if (song.currentInst) setCurrentInst(song.currentInst);
+    if (song.strumPattern) setStrumPattern(song.strumPattern);
+    if (song.drumPattern) setDrumPattern(song.drumPattern);
+    if (song.bassPattern) setBassPattern(song.bassPattern);
+    if (song.drumsOn !== undefined) setDrumsOn(song.drumsOn);
+    if (song.basslineOn !== undefined) setBasslineOn(song.basslineOn);
+    if (song.pedalboard) {
+      setPedalboard(song.pedalboard);
+    }
+    
+    showToast(`Song "${song.name}" geladen! 📁`);
+  };
+
+  const handleDeleteSong = (songId: string) => {
+    setSavedSongs(prev => prev.filter(s => s.id !== songId));
+    showToast("Song gelöscht! 🗑️");
+  };
+
+  const updateTimelineItemProps = (id: number, props: Partial<TimelineItem>) => {
+    setTimeline(prev => prev.map(item => {
+      if (item.id === id) {
+        const updated = { ...item, ...props };
+        if (selectedTimelineItem && selectedTimelineItem.id === id) {
+          setSelectedTimelineItem(updated);
+        }
+        return updated;
+      }
+      return item;
+    }));
+  };
+
   const clearTimeline = () => {
+    setSelectedTimelineItem(null);
     stopPlay();
     setTimeline([]);
   };
@@ -2280,9 +2384,36 @@ export default function App() {
     }
 
     const item = currentTimeline[playIdx];
-    const beatDur = 60 / bpm;
+    const stepBpm = item.bpmOverride || bpm;
+    const beatDur = 60 / stepBpm;
     const barDur = beatDur * beatsPerBar;
     const now = audioContextRef.current?.currentTime ?? 0;
+
+    // Apply master dynamic gain automation of this step
+    const masterGain = masterGainRef.current;
+    const baseGainVal = 0.8;
+    if (masterGain) {
+      masterGain.gain.cancelScheduledValues(now);
+      
+      let targetGain = baseGainVal;
+      if (item.dynamic === "piano") {
+        targetGain = baseGainVal * 0.4;
+        masterGain.gain.setValueAtTime(targetGain, now);
+      } else if (item.dynamic === "forte") {
+        targetGain = baseGainVal * 1.5;
+        masterGain.gain.setValueAtTime(targetGain, now);
+      } else if (item.dynamic === "crescendo") {
+        masterGain.gain.setValueAtTime(baseGainVal * 0.15, now);
+        masterGain.gain.linearRampToValueAtTime(baseGainVal * 1.5, now + barDur);
+      } else if (item.dynamic === "decrescendo") {
+        masterGain.gain.setValueAtTime(baseGainVal * 1.5, now);
+        masterGain.gain.linearRampToValueAtTime(baseGainVal * 0.12, now + barDur);
+      } else if (item.dynamic === "break") {
+        masterGain.gain.setValueAtTime(0, now);
+      } else {
+        masterGain.gain.setValueAtTime(baseGainVal, now);
+      }
+    }
 
     if (item.type === "label") {
       playTimeoutRef.current = setTimeout(() => {
@@ -2294,7 +2425,6 @@ export default function App() {
     if (item.type === "recording") {
       if (item.audioBuffer) {
         const ctx = audioContextRef.current;
-        const masterGain = masterGainRef.current;
         if (ctx && masterGain) {
           const source = ctx.createBufferSource();
           source.buffer = item.audioBuffer;
@@ -2316,12 +2446,20 @@ export default function App() {
 
     // Play Chord
     if (item.semitone !== undefined && item.quality) {
-      playChordInst(item.semitone, item.quality, barDur * 0.85, strumPattern);
-      if (basslineOn) scheduleBassPattern(item.semitone, item.quality, now, barDur);
-      if (drumsOn) scheduleDrumPattern(now, barDur);
-      if (strumPattern === "strum") {
-        for (let b = 0; b < beatsPerBar; b++) {
-          playChuck(now + beatDur * (b + 0.5));
+      const activeStrum = item.strumOverride || strumPattern;
+
+      if (item.technique !== "break" && item.dynamic !== "break") {
+        playChordInst(item.semitone, item.quality, barDur * 0.85, activeStrum);
+        
+        // Backing band plays only if technique is NOT "hold"
+        if (item.technique !== "hold") {
+          if (basslineOn) scheduleBassPattern(item.semitone, item.quality, now, barDur);
+          if (drumsOn) scheduleDrumPattern(now, barDur);
+          if (activeStrum === "strum") {
+            for (let b = 0; b < beatsPerBar; b++) {
+              playChuck(now + beatDur * (b + 0.5));
+            }
+          }
         }
       }
     }
@@ -2886,6 +3024,69 @@ export default function App() {
                     </div>
 
                     <div className="space-y-4 max-h-[360px] overflow-y-auto pr-1 scrollbar-none">
+                      {/* EIGENE KREATIONEN & SAVE PANEL */}
+                      <div className="bg-[#120a05] border border-[#d4943c]/20 p-2.5 rounded-xl mb-1">
+                        <span className="block text-[10px] font-mono text-[#d4943c] uppercase tracking-wider mb-2 font-bold flex items-center gap-1">
+                          💾 Song-Grid speichern
+                        </span>
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            placeholder="Mein neuer Song..."
+                            value={newSongName}
+                            onChange={(e) => setNewSongName(e.target.value)}
+                            className="bg-[#1a1008] border border-[#4a3828] text-xs text-[#c8b8a4] placeholder:text-[#5a4e40] px-2 py-1.5 rounded-lg focus:outline-none focus:border-[#d4943c] flex-grow font-sans min-w-0"
+                          />
+                          <button
+                            onClick={handleSaveSong}
+                            title="Speichere deine eigene Progression lokal"
+                            className="bg-[#d4943c] hover:bg-[#b0782a] text-[#120a05] font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition-all cursor-pointer shadow-md shrink-0 duration-150"
+                          >
+                            Sichern
+                          </button>
+                        </div>
+                      </div>
+
+                      {savedSongs.length > 0 && (
+                        <div className="bg-[#1a1008]/40 border border-[#4a3828]/20 rounded-xl p-2">
+                          <span className="block text-[10px] font-mono text-[#7a6a58] uppercase tracking-wider mb-2 font-bold">
+                            📁 Eigene Songs ({savedSongs.length})
+                          </span>
+                          <div className="space-y-1 max-h-[160px] overflow-y-auto pr-0.5 scrollbar-thin">
+                            {savedSongs.map((song) => (
+                              <div
+                                key={song.id}
+                                className="group flex items-center justify-between bg-[#120a05] border border-[#3a2818]/40 p-2 rounded-lg transition-all hover:border-[#d4943c]/30"
+                              >
+                                <div className="text-left overflow-hidden min-w-0 pr-1">
+                                  <span className="block text-xs font-bold text-[#c8b8a4] group-hover:text-[#d4943c] truncate">
+                                    {song.name}
+                                  </span>
+                                  <span className="block text-[8px] font-mono text-[#7a6a58] mt-0.5">
+                                    {song.bpm} BPM • {song.timeline ? song.timeline.filter((ch: any) => ch.type === "chord").length : 0} Chords
+                                  </span>
+                                </div>
+                                <div className="flex gap-1 shrink-0">
+                                  <button
+                                    onClick={() => handleLoadSong(song)}
+                                    className="text-[9px] font-bold bg-[#d4943c]/10 text-[#d4943c] hover:bg-[#d4943c] hover:text-[#120a05] px-1.5 py-0.5 rounded transition-all cursor-pointer"
+                                  >
+                                    Laden
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteSong(song.id)}
+                                    className="text-[9px] font-bold bg-[#b84a32]/10 text-[#b84a32] hover:bg-[#b84a32] hover:text-white px-1.5 py-0.5 rounded transition-all cursor-pointer"
+                                    title="Löschen"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Section 1: Harmonische Kadenzen */}
                       <div>
                         <span className="block text-[10px] font-mono text-[#7a6a58] uppercase tracking-wider mb-2 font-bold">
@@ -4437,6 +4638,8 @@ export default function App() {
                       let textCol = "text-[#d4943c]";
                       if (item.quality === "min") textCol = "text-[#6fc888]";
                       if (item.quality === "dim") textCol = "text-[#b84a32]";
+                      
+                      const isSelected = selectedTimelineItem?.id === item.id;
 
                       return (
                         <motion.div
@@ -4445,25 +4648,50 @@ export default function App() {
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.8 }}
                           onClick={() => {
+                            setSelectedTimelineItem(item);
                             if (item.semitone !== undefined && item.quality) {
-                              playChordInst(item.semitone, item.quality, 0.7, strumPattern);
+                              playChordInst(item.semitone, item.quality, 0.7, item.strumOverride || strumPattern);
                             }
                           }}
                           className={`flex-shrink-0 w-16 h-16 rounded-xl border flex flex-col items-center justify-center relative cursor-pointer group transition-all ${
                             isActive
                               ? "border-[#d4943c] bg-[#d4943c]/15 shadow-[0_0_12px_rgba(212,148,60,0.3)] scale-105"
+                              : isSelected
+                              ? "border-[#d4943c] ring-2 ring-[#d4943c]/70 bg-[#1c1209]"
                               : "border-[#4a3828] bg-[#1a1008] hover:border-[#c8b8a4]"
                           }`}
                         >
                           <span className="text-[8px] font-mono text-[#7a6a58] absolute top-1 left-2">
                             {idx + 1}
                           </span>
+                          
+                          {/* Speed indicator */}
+                          {item.bpmOverride && (
+                            <span className="text-[6.5px] font-mono text-[#d4943c] absolute top-1 right-2">
+                              ⚡{item.bpmOverride}
+                            </span>
+                          )}
+
                           <span className={`text-sm font-black tracking-tight ${textCol}`}>
                             {capillaryName}
                           </span>
                           {item.roman && (
                             <span className="text-[9px] font-mono text-[#7a6a58] mt-0.5 uppercase">
                               {item.roman}
+                            </span>
+                          )}
+
+                          {/* Dynamics Indicator */}
+                          {item.dynamic && item.dynamic !== "normal" && (
+                            <span className="text-[6px] text-emerald-400 absolute bottom-1.5 left-2 uppercase font-mono font-black scale-90">
+                              {item.dynamic === "piano" ? "pp" : item.dynamic === "forte" ? "ff" : item.dynamic === "crescendo" ? "cres." : item.dynamic === "decrescendo" ? "dec." : "mut"}
+                            </span>
+                          )}
+
+                          {/* Technique Indicator */}
+                          {item.technique && item.technique !== "normal" && (
+                            <span className="text-[6px] text-rose-400 absolute bottom-1.5 right-2 uppercase font-mono font-black scale-90">
+                              {item.technique === "hold" ? "hold" : "mute"}
                             </span>
                           )}
 
@@ -4494,6 +4722,7 @@ export default function App() {
                             onClick={(e) => {
                               e.stopPropagation();
                               removeTimelineItem(item.id);
+                              if (isSelected) setSelectedTimelineItem(null);
                             }}
                             className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 rounded-full bg-[#b84a32] text-white flex items-center justify-center text-[8px] border border-[#1a1008] cursor-pointer"
                           >
@@ -4505,6 +4734,145 @@ export default function App() {
                   </AnimatePresence>
                 )}
               </div>
+
+              {/* Row 4.5: Chord properties layout editor (Dynamic & Technique Editor) */}
+              {selectedTimelineItem && (
+                (() => {
+                  const currentSecIdx = timeline.findIndex(ch => ch.id === selectedTimelineItem.id);
+                  const selectedInTimeline = timeline[currentSecIdx];
+                  if (!selectedInTimeline || selectedInTimeline.type !== "chord") return null;
+
+                  return (
+                    <div className="bg-[#20150c]/90 border border-[#d4943c]/30 rounded-xl p-3 mb-3 animate-fadeIn text-left">
+                      <div className="flex items-center justify-between border-b border-[#4a3828]/50 pb-2 mb-2">
+                        <span className="text-xs font-bold text-[#c8b8a4] flex items-center gap-1.5 uppercase font-mono tracking-wide">
+                          ✏️ Arrangement für Schritt #{currentSecIdx + 1}: <span className="text-[#d4943c] font-black text-xs sm:text-sm">{selectedInTimeline.name}</span>
+                        </span>
+                        <button
+                          onClick={() => setSelectedTimelineItem(null)}
+                          className="text-[#7a6a58] hover:text-[#c8b8a4] text-xs font-bold cursor-pointer transition-colors px-1.5"
+                        >
+                          Schließen ✕
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+                        {/* 1. Tempo (BPM Override) */}
+                        <div className="space-y-1 bg-[#120a05] p-2 rounded-lg border border-[#3a2818]/60">
+                          <span className="block text-[10px] uppercase tracking-wider text-[#7a6a58] font-mono font-bold">
+                            ⚡ Tempo-Änderung (BPM)
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="range"
+                              min="40"
+                              max="240"
+                              value={selectedInTimeline.bpmOverride || bpm}
+                              onChange={(e) => updateTimelineItemProps(selectedInTimeline.id, { bpmOverride: parseInt(e.target.value) })}
+                              className="w-full accent-[#d4943c] cursor-pointer"
+                            />
+                            <span className="text-xs font-mono font-bold text-[#d4943c] w-9 text-right shrink-0">
+                              {selectedInTimeline.bpmOverride || bpm}
+                            </span>
+                          </div>
+                          <div className="flex gap-1 justify-between">
+                            <span className="text-[8px] text-[#7a6a58] font-mono">Langsamer ↔ Schneller</span>
+                            {selectedInTimeline.bpmOverride && (
+                              <button
+                                onClick={() => updateTimelineItemProps(selectedInTimeline.id, { bpmOverride: undefined })}
+                                className="text-[8px] text-[#b84a32] hover:underline cursor-pointer"
+                              >
+                                Reset (Global)
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 2. Volume Dynamics */}
+                        <div className="space-y-1 bg-[#120a05] p-2 rounded-lg border border-[#3a2818]/60">
+                          <span className="block text-[10px] uppercase tracking-wider text-[#7a6a58] font-mono font-bold">
+                            🔊 Lautstärke & Dynamik
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {[
+                              { label: "Normal (p)", val: "normal" },
+                              { label: "Piano (pp)", val: "piano" },
+                              { label: "Forte (ff)", val: "forte" },
+                              { label: "Crescendo ↗", val: "crescendo" },
+                              { label: "Decrescendo ↘", val: "decrescendo" }
+                            ].map((opt) => (
+                              <button
+                                key={opt.val}
+                                onClick={() => updateTimelineItemProps(selectedInTimeline.id, { dynamic: opt.val as any })}
+                                className={`text-[9px] px-2 py-1 rounded border font-mono font-bold transition-all cursor-pointer ${
+                                  (selectedInTimeline.dynamic || "normal") === opt.val
+                                    ? "bg-[#d4943c] border-[#d4943c] text-[#120a05]"
+                                    : "bg-[#1a1008] border-[#4a3828] text-[#c8b8a4] hover:border-[#7a6a58]"
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 3. Technique */}
+                        <div className="space-y-1 bg-[#120a05] p-2 rounded-lg border border-[#3a2818]/60">
+                          <span className="block text-[10px] uppercase tracking-wider text-[#7a6a58] font-mono font-bold">
+                            🎸 Band-Muting & Spielweise
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {[
+                              { label: "Standard Band", val: "normal" },
+                              { label: "Hold (Solo Akkord)", val: "hold" },
+                              { label: "Mute Break (Stopp)", val: "break" }
+                            ].map((opt) => (
+                              <button
+                                key={opt.val}
+                                onClick={() => updateTimelineItemProps(selectedInTimeline.id, { technique: opt.val as any })}
+                                className={`text-[9px] px-2 py-1 rounded border font-mono font-bold transition-all cursor-pointer ${
+                                  (selectedInTimeline.technique || "normal") === opt.val
+                                    ? "bg-[#d4943c] border-[#d4943c] text-[#120a05]"
+                                    : "bg-[#1a1008] border-[#4a3828] text-[#c8b8a4] hover:border-[#7a6a58]"
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 4. Strum Override */}
+                        <div className="space-y-1 bg-[#120a05] p-2 rounded-lg border border-[#3a2818]/60">
+                          <span className="block text-[10px] uppercase tracking-wider text-[#7a6a58] font-mono font-bold">
+                            🎹 Step Zupfmuster (Override)
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {[
+                              { label: "Standard", val: undefined },
+                              { label: "Blocks", val: "block" },
+                              { label: "Arp", val: "arpeggio" },
+                              { label: "Strum 🎘", val: "strum" }
+                            ].map((opt, oi) => (
+                              <button
+                                key={oi}
+                                onClick={() => updateTimelineItemProps(selectedInTimeline.id, { strumOverride: opt.val as any })}
+                                className={`text-[9px] px-2 py-1 rounded border font-mono font-bold transition-all cursor-pointer ${
+                                  selectedInTimeline.strumOverride === opt.val
+                                    ? "bg-[#d4943c] border-[#d4943c] text-[#120a05]"
+                                    : "bg-[#1a1008] border-[#4a3828] text-[#c8b8a4] hover:border-[#7a6a58]"
+                                }`}
+                              >
+                                {opt.label || "System"}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
 
               {/* Row 5: Parts Share, Labels Adder */}
               <div className="flex flex-wrap items-center gap-3 mt-2.5 pt-2 border-t border-[#4a3828]/25">
