@@ -27,7 +27,9 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  X
+  X,
+  Sun,
+  Moon
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -851,6 +853,22 @@ export default function App() {
       return [];
     }
   });
+
+  const [isLightMode, setIsLightMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("jam_light_mode") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("jam_light_mode", isLightMode ? "true" : "false");
+    } catch (e) {
+      console.warn("Could not save light mode to localStorage", e);
+    }
+  }, [isLightMode]);
 
   // Sync saved list to local storage
   useEffect(() => {
@@ -2759,7 +2777,7 @@ export default function App() {
   };
 
   return (
-    <div className="bg-[#1a1008] text-[#f0e0cc] min-h-screen font-sans relative overflow-x-hidden pb-96">
+    <div className={`bg-[#1a1008] text-[#f0e0cc] min-h-screen font-sans relative overflow-x-hidden pb-96 transition-colors duration-300 ${isLightMode ? "light-theme" : ""}`}>
       {/* Immersive background fretboard simulation */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute left-1/2 -translate-x-1/2 w-full max-w-[550px] h-full bg-gradient-to-r from-[#140b04] via-[#221308] to-[#140b04] border-x-4 border-[#3d2b1a] shadow-inner opacity-75">
@@ -2794,6 +2812,23 @@ export default function App() {
             </p>
           </div>
           <div className="flex gap-2">
+            <button
+              onClick={() => setIsLightMode(!isLightMode)}
+              title={isLightMode ? "Dunkelmodus aktivieren" : "Hellmodus aktivieren"}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-[#2a1e10] border border-[#4a3828] text-[#c8b8a4] hover:border-[#d4943c] hover:text-[#f0e0cc] transition-all cursor-pointer"
+            >
+              {isLightMode ? (
+                <>
+                  <Moon size={14} className="text-[#d4943c]" />
+                  <span>Dunkel</span>
+                </>
+              ) : (
+                <>
+                  <Sun size={14} className="text-[#d4943c]" />
+                  <span>Hell</span>
+                </>
+              )}
+            </button>
             <button
                onClick={() => setInfoModalOpen(true)}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#2a1e10] border border-[#4a3828] text-[#c8b8a4] hover:border-[#d4943c] hover:text-[#f0e0cc] transition-all cursor-pointer"
@@ -4230,33 +4265,58 @@ export default function App() {
                 <div className="h-5 w-px bg-[#4a3828]" />
 
                 {/* BPM Slider & Presets */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center flex-wrap gap-2 bg-[#120a04] px-2.5 py-1.5 rounded-xl border border-[#4a3828]/40 max-w-full">
                   <span className="text-xs font-mono text-[#7a6a58] font-bold">BPM</span>
-                  <input
-                    type="range"
-                    min="50"
-                    max="200"
-                    value={bpm}
-                    onChange={(e) => setBpm(Number(e.target.value))}
-                    className="w-16 accent-[#d4943c] cursor-ew-resize"
-                  />
-                  <span className="text-xs font-mono font-extrabold text-[#d4943c] w-7">
+                  
+                  {/* Precision micro adjusters for touch targets */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setBpm((b) => Math.max(40, b - 1))}
+                      title="1 BPM langsamer"
+                      className="w-5 h-5 flex items-center justify-center rounded bg-[#1a1008] border border-[#4a3828] text-xs font-bold hover:text-[#d4943c] cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="range"
+                      min="40"
+                      max="420"
+                      value={bpm}
+                      onChange={(e) => setBpm(Number(e.target.value))}
+                      className="w-20 accent-[#d4943c] cursor-ew-resize h-1 bg-[#2a1e10] rounded"
+                    />
+                    <button
+                      onClick={() => setBpm((b) => Math.min(420, b + 1))}
+                      title="1 BPM schneller"
+                      className="w-5 h-5 flex items-center justify-center rounded bg-[#1a1008] border border-[#4a3828] text-xs font-bold hover:text-[#d4943c] cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <span className="text-xs font-mono font-extrabold text-[#d4943c] w-8 text-center bg-[#1a1008] px-1 py-0.5 rounded border border-[#4a3828]/50">
                     {bpm}
                   </span>
-                  {/* Quick BPM Presets */}
-                  {[70, 90, 100, 120, 140].map((b) => (
-                    <button
-                      key={b}
-                      onClick={() => setBpm(b)}
-                      className={`text-[10px] px-1.5 py-0.5 rounded-md border text-center transition-all cursor-pointer ${
-                        bpm === b
-                          ? "bg-[#d4943c]/20 border-[#d4943c] text-[#d4943c] font-black"
-                          : "bg-[#1a1008] border-[#4a3828] text-[#7a6a58]"
-                      }`}
-                    >
-                      {b}
-                    </button>
-                  ))}
+
+                  {/* Micro divider */}
+                  <div className="h-4 w-px bg-[#4a3828]/50 hidden sm:block" />
+
+                  {/* Quick BPM Presets adapted for higher range */}
+                  <div className="flex flex-wrap items-center gap-1">
+                    {[60, 90, 120, 180, 240, 360].map((b) => (
+                      <button
+                        key={b}
+                        onClick={() => setBpm(b)}
+                        className={`text-[9px] px-1.5 py-0.5 rounded-md border text-center transition-all cursor-pointer ${
+                          bpm === b
+                            ? "bg-[#d4943c]/20 border-[#d4943c] text-[#d4943c] font-black"
+                            : "bg-[#1a1008] border-[#4a3828] text-[#7a6a58]"
+                        }`}
+                      >
+                        {b}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -4762,16 +4822,34 @@ export default function App() {
                           <span className="block text-[10px] uppercase tracking-wider text-[#7a6a58] font-mono font-bold">
                             ⚡ Tempo-Änderung (BPM)
                           </span>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                const val = selectedInTimeline.bpmOverride || bpm;
+                                updateTimelineItemProps(selectedInTimeline.id, { bpmOverride: Math.max(40, val - 1) });
+                              }}
+                              className="w-5 h-5 flex items-center justify-center rounded bg-[#1a1008] border border-[#4a3828] text-xs font-bold hover:text-[#d4943c] cursor-pointer shrink-0"
+                            >
+                              -
+                            </button>
                             <input
                               type="range"
                               min="40"
-                              max="240"
+                              max="420"
                               value={selectedInTimeline.bpmOverride || bpm}
                               onChange={(e) => updateTimelineItemProps(selectedInTimeline.id, { bpmOverride: parseInt(e.target.value) })}
-                              className="w-full accent-[#d4943c] cursor-pointer"
+                              className="w-full accent-[#d4943c] cursor-pointer h-1 bg-[#2a1e10] rounded"
                             />
-                            <span className="text-xs font-mono font-bold text-[#d4943c] w-9 text-right shrink-0">
+                            <button
+                              onClick={() => {
+                                const val = selectedInTimeline.bpmOverride || bpm;
+                                updateTimelineItemProps(selectedInTimeline.id, { bpmOverride: Math.min(420, val + 1) });
+                              }}
+                              className="w-5 h-5 flex items-center justify-center rounded bg-[#1a1008] border border-[#4a3828] text-xs font-bold hover:text-[#d4943c] cursor-pointer shrink-0"
+                            >
+                              +
+                            </button>
+                            <span className="text-xs font-mono font-bold text-[#d4943c] w-8 text-right shrink-0">
                               {selectedInTimeline.bpmOverride || bpm}
                             </span>
                           </div>

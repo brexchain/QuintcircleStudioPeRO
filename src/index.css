@@ -7,3 +7,130 @@
     display: none; /* Chrome, Safari and Opera */
   }
 }
+
+/* ==========================================
+   LIGHT MODE OVERRIDES (Vintage Warm Cream)
+   ========================================== */
+.light-theme {
+  background-color: #FAF7F2 !important;
+  color: #261608 !important;
+}
+
+/* Target elements with dark background classes */
+.light-theme .bg-\[\#1a1008\] {
+  background-color: #FAF7F2 !important;
+}
+.light-theme .bg-\[\#1a1008\]\/95 {
+  background-color: rgba(250, 247, 242, 0.95) !important;
+}
+.light-theme .bg-\[\#120a04\] {
+  background-color: #f3ebd9 !important;
+}
+.light-theme .bg-\[\#120a04\]\/95 {
+  background-color: rgba(243, 235, 217, 0.95) !important;
+}
+.light-theme .bg-\[\#120a05\] {
+  background-color: #ede2cd !important;
+}
+.light-theme .bg-\[\#2a1e10\] {
+  background-color: #e5d9c2 !important;
+}
+.light-theme .bg-\[\#1c1209\] {
+  background-color: #dfd4bf !important;
+}
+.light-theme .bg-\[\#20150c\]\/90 {
+  background-color: rgba(238, 228, 211, 0.95) !important;
+}
+.light-theme .bg-\[\#130a03\]\/90 {
+  background-color: rgba(247, 240, 225, 0.9) !important;
+}
+
+/* Target and fix inputs, selection boxes, textareas */
+.light-theme input,
+.light-theme select,
+.light-theme textarea {
+  background-color: #ffffff !important;
+  color: #261608 !important;
+  border-color: #cbbca5 !important;
+}
+.light-theme input::placeholder,
+.light-theme textarea::placeholder {
+  color: #9b8a74 !important;
+}
+
+/* Fretboard background simulator - soft light wood/vellum style */
+.light-theme .from-\[\#140b04\] {
+  --tw-gradient-from: #eddcb8 !important;
+  --tw-gradient-to: #eddcb8 !important;
+  --tw-gradient-stops: var(--tw-gradient-from), #faf5e6, var(--tw-gradient-to) !important;
+}
+.light-theme .via-\[\#221308\] {
+  --tw-gradient-via: #faf5e6 !important;
+}
+.light-theme .to-\[\#140b04\] {
+  --tw-gradient-to: #eddcb8 !important;
+}
+.light-theme .border-\[\#3d2b1a\] {
+  border-color: #cbbaa1 !important;
+}
+
+/* Text colors translation for perfect legibility */
+.light-theme .text-\[\#f0e0cc\] {
+  color: #261608 !important;
+}
+.light-theme .text-\[\#c8b8a4\] {
+  color: #4f341d !important;
+}
+.light-theme .text-\[\#7a6a58\] {
+  color: #7d6853 !important;
+}
+.light-theme .text-\[\#d4943c\] {
+  color: #b56b10 !important; /* darkened warm gold for optimal contrast */
+}
+.light-theme .text-\[\#e0d0b8\] {
+  color: #1e1005 !important;
+}
+
+/* Tab button colors overrides */
+.light-theme .text-\[\#1a1008\] {
+  color: #261608 !important;
+}
+
+/* Borders and dividers translation */
+.light-theme .border-\[\#4a3828\] {
+  border-color: #d8cdbb !important;
+}
+.light-theme .border-\[\#3a2818\] {
+  border-color: #d8cdbb !important;
+}
+.light-theme .border-\[\#4a3828\]\/40 {
+  border-color: rgba(216, 205, 187, 0.4) !important;
+}
+.light-theme .border-\[\#4a3828\]\/45 {
+  border-color: rgba(216, 205, 187, 0.45) !important;
+}
+.light-theme .border-\[\#d4943c\]\/20 {
+  border-color: rgba(181, 107, 16, 0.2) !important;
+}
+.light-theme .border-\[\#d4943c\]\/30 {
+  border-color: rgba(181, 107, 16, 0.3) !important;
+}
+.light-theme .border-\[\#3a2818\]\/40 {
+  border-color: rgba(216, 205, 187, 0.4) !important;
+}
+.light-theme .border-\[\#3a2818\]\/60 {
+  border-color: rgba(216, 205, 187, 0.6) !important;
+}
+
+/* Ensure the Circle of Fifths canvas and other indicators are beautifully readable */
+.light-theme svg text {
+  fill: #261608 !important;
+}
+.light-theme svg text.text-\[\#d4943c\] {
+  fill: #b56b10 !important;
+}
+
+/* Ensure active tab selection pills and tooltips maintain correct visibility */
+.light-theme .shadow-md {
+  box-shadow: 0 4px 12px rgba(80, 60, 40, 0.08) !important;
+}
