@@ -58,7 +58,7 @@ interface TimelineItem {
 }
 
 // Theoretical progressions DB
-// Theoretical progressions DB with explicit categories
+// Theoretical progressions DB with explicit categories and extensive physical preset configurations (BPM, Style, Instrument, and Pedalboard FX Chain)
 const PROG_DB = [
   {
     id: "pop",
@@ -77,7 +77,18 @@ const PROG_DB = [
       "No Woman No Cry — Bob Marley",
       "Don't Stop Believin' — Journey"
     ],
-    desc: "Die meistgenutzte Pop-Akkordfolge überhaupt."
+    desc: "Die meistgenutzte Pop-Akkordfolge überhaupt.",
+    bpm: 110,
+    strumPattern: "strum" as const,
+    drumPattern: "standard",
+    bassPattern: "root",
+    currentInst: "piano",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: false },
+      delay: { active: false },
+      reverb: { active: true, decay: 2.2, mix: 0.35 }
+    }
   },
   {
     id: "rock",
@@ -90,7 +101,18 @@ const PROG_DB = [
       { s: 0, q: "maj" as const, r: "I" }
     ],
     songs: ["Twist and Shout — Beatles", "La Bamba — Valens", "Johnny B. Goode — Berry", "Hound Dog — Elvis"],
-    desc: "Der klassische, energiegeladene 3-Akkord-Rock."
+    desc: "Der klassische, energiegeladene 3-Akkord-Rock.",
+    bpm: 135,
+    strumPattern: "strum" as const,
+    drumPattern: "rock",
+    bassPattern: "walk",
+    currentInst: "guitar_electric_dist",
+    pedalboard: {
+      overdrive: { active: true, drive: 0.6, tone: 0.5, volume: 0.7 },
+      chorus: { active: false },
+      delay: { active: false },
+      reverb: { active: true, decay: 1.5, mix: 0.25 }
+    }
   },
   {
     id: "melo",
@@ -103,7 +125,18 @@ const PROG_DB = [
       { s: 7, q: "maj" as const, r: "V" }
     ],
     songs: ["Zombie — Cranberries", "All of Me — John Legend", "Skyfall — Adele", "Despacito — Luis Fonsi"],
-    desc: "Beginnt in der Paralleltonart (Moll) für emotionale Tiefe."
+    desc: "Beginnt in der Paralleltonart (Moll) für emotionale Tiefe.",
+    bpm: 82,
+    strumPattern: "arpeggio" as const,
+    drumPattern: "standard",
+    bassPattern: "melodic",
+    currentInst: "piano",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: false },
+      delay: { active: true, time: 0.4, feedback: 0.5, mix: 0.3 },
+      reverb: { active: true, decay: 3.5, mix: 0.45 }
+    }
   },
   {
     id: "doo",
@@ -116,7 +149,18 @@ const PROG_DB = [
       { s: 7, q: "maj" as const, r: "V" }
     ],
     songs: ["Stand By Me — Ben E. King", "Every Breath You Take — Police", "Blue Moon — Elvis"],
-    desc: "Der ikonische Sound der goldenen 50er Jahre."
+    desc: "Der ikonische Sound der goldenen 50er Jahre.",
+    bpm: 90,
+    strumPattern: "strum" as const,
+    drumPattern: "standard",
+    bassPattern: "root",
+    currentInst: "piano",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: true, rate: 1.5, depth: 0.35, mix: 0.3 },
+      delay: { active: false },
+      reverb: { active: true, decay: 2.0, mix: 0.3 }
+    }
   },
   {
     id: "sehn",
@@ -129,7 +173,18 @@ const PROG_DB = [
       { s: 7, q: "maj" as const, r: "V" }
     ],
     songs: ["With or Without You — U2", "Marry You — Bruno Mars", "Cryin' — Aerosmith"],
-    desc: "Ein treibender, zyklischer Spannungsbogen."
+    desc: "Ein treibender, zyklischer Spannungsbogen.",
+    bpm: 105,
+    strumPattern: "strum" as const,
+    drumPattern: "standard",
+    bassPattern: "syncopated",
+    currentInst: "guitar_acoustic",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: true, rate: 2.0, depth: 0.2, mix: 0.3 },
+      delay: { active: false },
+      reverb: { active: true, decay: 2.5, mix: 0.3 }
+    }
   },
   {
     id: "andal",
@@ -142,7 +197,18 @@ const PROG_DB = [
       { s: 4, q: "maj" as const, r: "V" }
     ],
     songs: ["Hit the Road Jack — Ray Charles", "Sultans of Swing — Dire Straits", "Stairway to Heaven (Teil)"],
-    desc: "Aus der traditionellen spanischen Musik und Flamenco."
+    desc: "Aus der traditionellen spanischen Musik und Flamenco.",
+    bpm: 115,
+    strumPattern: "strum" as const,
+    drumPattern: "latin",
+    bassPattern: "melodic",
+    currentInst: "guitar",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: false },
+      delay: { active: false },
+      reverb: { active: true, decay: 2.5, mix: 0.35 }
+    }
   },
   {
     id: "pach",
@@ -159,7 +225,18 @@ const PROG_DB = [
       { s: 7, q: "maj" as const, r: "V" }
     ],
     songs: ["Canon in D — Pachelbel", "Basket Case — Green Day", "Memories — Maroon 5"],
-    desc: "Barocke Perfektion, die die zeitgenössische Musik prägt."
+    desc: "Barocke Perfektion, die die zeitgenössische Musik prägt.",
+    bpm: 78,
+    strumPattern: "arpeggio" as const,
+    drumPattern: "standard",
+    bassPattern: "root",
+    currentInst: "strings",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: false },
+      delay: { active: false },
+      reverb: { active: true, decay: 3.0, mix: 0.4 }
+    }
   },
   {
     id: "plagal",
@@ -172,7 +249,18 @@ const PROG_DB = [
       { s: 5, q: "maj" as const, r: "IV" }
     ],
     songs: ["Imagine — John Lennon", "Gymnopédie No.1 — Erik Satie", "In My Life — Beatles"],
-    desc: "Ein meditativer Pendelschlag zwischen Tonika (I) und Subdominante (IV)."
+    desc: "Ein meditativer Pendelschlag zwischen Tonika (I) und Subdominante (IV).",
+    bpm: 65,
+    strumPattern: "block" as const,
+    drumPattern: "standard",
+    bassPattern: "root",
+    currentInst: "piano",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: false },
+      delay: { active: false },
+      reverb: { active: true, decay: 4.0, mix: 0.5 }
+    }
   },
   {
     id: "blues_12",
@@ -193,7 +281,18 @@ const PROG_DB = [
       { s: 7, q: "maj" as const, r: "V" }
     ],
     songs: ["Sweet Home Chicago — Robert Johnson", "Pride and Joy — SRV", "Rock Around the Clock"],
-    desc: "Das fundamentale 12-Takt-Formular aller Blues- und Jam-Klassiker."
+    desc: "Das fundamentale 12-Takt-Formular aller Blues- und Jam-Klassiker.",
+    bpm: 112,
+    strumPattern: "strum" as const,
+    drumPattern: "rock",
+    bassPattern: "walk",
+    currentInst: "guitar_electric_clean",
+    pedalboard: {
+      overdrive: { active: true, drive: 0.25, tone: 0.6, volume: 0.85 },
+      chorus: { active: false },
+      delay: { active: true, time: 0.2, feedback: 0.2, mix: 0.25 },
+      reverb: { active: true, decay: 1.8, mix: 0.2 }
+    }
   },
   {
     id: "royal_road",
@@ -206,7 +305,18 @@ const PROG_DB = [
       { s: 9, q: "min" as const, r: "vi" }
     ],
     songs: ["Unzählige Anime-Openings", "Fly Me To The Moon (Modifiziert)", "Never Gonna Give You Up"],
-    desc: "Die beliebteste Kadenz asiatischer Musik für epische, vorwärtsstrebende Melodien."
+    desc: "Die beliebteste Kadenz asiatischer Musik für epische, vorwärtsstrebende Melodien.",
+    bpm: 128,
+    strumPattern: "strum" as const,
+    drumPattern: "rock",
+    bassPattern: "syncopated",
+    currentInst: "synth",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: false },
+      delay: { active: true, time: 0.35, feedback: 0.4, mix: 0.35 },
+      reverb: { active: true, decay: 2.5, mix: 0.3 }
+    }
   },
   {
     id: "neo_soul",
@@ -219,9 +329,19 @@ const PROG_DB = [
       { s: 5, q: "maj" as const, r: "IV" }
     ],
     songs: ["Sunday Morning — Maroon 5", "Don't Know Why — Norah Jones", "Just the Two of Us (Teil)"],
-    desc: "Ein butterweiches Jazz-Pattern (ii - V - I - IV) voller Eleganz und Groove."
+    desc: "Ein butterweiches Jazz-Pattern (ii - V - I - IV) voller Eleganz und Groove.",
+    bpm: 92,
+    strumPattern: "strum" as const,
+    drumPattern: "funk",
+    bassPattern: "melodic",
+    currentInst: "guitar_electric_clean",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: true, rate: 1.0, depth: 0.4, mix: 0.4 },
+      delay: { active: false },
+      reverb: { active: true, decay: 2.0, mix: 0.25 }
+    }
   },
-  // Famous Song Riffs starting here
   {
     id: "smoke_riff",
     name: "Smoke on the Water (Riff)",
@@ -241,7 +361,18 @@ const PROG_DB = [
       { s: 0, q: "min" as const, r: "i" }
     ],
     songs: ["Smoke on the Water — Deep Purple"],
-    desc: "Das ikonischste Riff der Gitarrengeschichte als vollständige, perfekt aufgelöste 12-taktige Akkordfolge."
+    desc: "Das ikonischste Riff der Gitarrengeschichte als vollständige, perfekt aufgelöste 12-taktige Akkordfolge.",
+    bpm: 112,
+    strumPattern: "block" as const,
+    drumPattern: "rock",
+    bassPattern: "root",
+    currentInst: "guitar_electric_dist",
+    pedalboard: {
+      overdrive: { active: true, drive: 0.85, tone: 0.5, volume: 0.75 },
+      chorus: { active: false },
+      delay: { active: false },
+      reverb: { active: true, decay: 1.2, mix: 0.2 }
+    }
   },
   {
     id: "hotel_cali",
@@ -258,7 +389,18 @@ const PROG_DB = [
       { s: 4, q: "maj" as const, r: "III" }
     ],
     songs: ["Hotel California — Eagles"],
-    desc: "Der legendäre, melancholische Akkord-Kreis mit absteigender Quinten-Struktur."
+    desc: "Der legendäre, melancholische Akkord-Kreis mit absteigender Quinten-Struktur.",
+    bpm: 74,
+    strumPattern: "arpeggio" as const,
+    drumPattern: "latin",
+    bassPattern: "root",
+    currentInst: "guitar_acoustic",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: false },
+      delay: { active: true, time: 0.38, feedback: 0.4, mix: 0.3 },
+      reverb: { active: true, decay: 2.2, mix: 0.25 }
+    }
   },
   {
     id: "wonderwall",
@@ -271,7 +413,18 @@ const PROG_DB = [
       { s: 9, q: "maj" as const, r: "VI" }
     ],
     songs: ["Wonderwall — Oasis", "Boulevard of Broken Dreams (Teil)"],
-    desc: "Das ultimative Akustik-Gitarren-Lagerfeuer-Riff mit schwebendem Charakter."
+    desc: "Das ultimative Akustik-Gitarren-Lagerfeuer-Riff mit schwebendem Charakter.",
+    bpm: 88,
+    strumPattern: "strum" as const,
+    drumPattern: "standard",
+    bassPattern: "root",
+    currentInst: "guitar_acoustic",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: true, rate: 1.2, depth: 0.25, mix: 0.25 },
+      delay: { active: false },
+      reverb: { active: true, decay: 1.8, mix: 0.2 }
+    }
   },
   {
     id: "creep_climb",
@@ -284,7 +437,18 @@ const PROG_DB = [
       { s: 5, q: "min" as const, r: "iv" }
     ],
     songs: ["Creep — Radiohead", "Get Free — Lana Del Rey"],
-    desc: "Bittersüßer Klang durch den moderen Austausch der Moll-Subdominante (iv)."
+    desc: "Bittersüßer Klang durch den moderen Austausch der Moll-Subdominante (iv).",
+    bpm: 92,
+    strumPattern: "block" as const,
+    drumPattern: "rock",
+    bassPattern: "root",
+    currentInst: "guitar_electric_clean",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: false },
+      delay: { active: false },
+      reverb: { active: true, decay: 2.8, mix: 0.3 }
+    }
   },
   {
     id: "smells_grunge",
@@ -297,7 +461,18 @@ const PROG_DB = [
       { s: 8, q: "maj" as const, r: "bVI" }
     ],
     songs: ["Smells Like Teen Spirit — Nirvana", "More Than a Feeling — Boston"],
-    desc: "Das ikonischen Grunge-Vier-Akkord-Riff für dröhnende Gitarrengrooves."
+    desc: "Das ikonischen Grunge-Vier-Akkord-Riff für dröhnende Gitarrengrooves.",
+    bpm: 117,
+    strumPattern: "strum" as const,
+    drumPattern: "rock",
+    bassPattern: "octave",
+    currentInst: "guitar_electric_dist",
+    pedalboard: {
+      overdrive: { active: true, drive: 0.9, tone: 0.6, volume: 0.7 },
+      chorus: { active: false },
+      delay: { active: false },
+      reverb: { active: true, decay: 1.5, mix: 0.25 }
+    }
   },
   {
     id: "sweet_child",
@@ -310,7 +485,18 @@ const PROG_DB = [
       { s: 0, q: "maj" as const, r: "I" }
     ],
     songs: ["Sweet Child O' Mine — Guns N' Roses"],
-    desc: "Treibender, sonniger mixolydischer Sound (I - bVII - IV - I)."
+    desc: "Treibender, sonniger mixolydischer Sound (I - bVII - IV - I).",
+    bpm: 125,
+    strumPattern: "strum" as const,
+    drumPattern: "rock",
+    bassPattern: "syncopated",
+    currentInst: "guitar_electric_clean",
+    pedalboard: {
+      overdrive: { active: true, drive: 0.5, tone: 0.7, volume: 0.7 },
+      chorus: { active: false },
+      delay: { active: true, time: 0.35, feedback: 0.35, mix: 0.35 },
+      reverb: { active: true, decay: 2.0, mix: 0.25 }
+    }
   },
   {
     id: "get_lucky",
@@ -323,7 +509,18 @@ const PROG_DB = [
       { s: 2, q: "maj" as const, r: "II" }
     ],
     songs: ["Get Lucky — Daft Punk", "Attention — Charlie Puth"],
-    desc: "Disco/Soul Loop der Extraklasse mit unwiderstehlichem Drang."
+    desc: "Disco/Soul Loop der Extraklasse mit unwiderstehlichem Drang.",
+    bpm: 116,
+    strumPattern: "strum" as const,
+    drumPattern: "funk",
+    bassPattern: "octave",
+    currentInst: "guitar_electric_clean",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: true, rate: 2.2, depth: 0.3, mix: 0.35 },
+      delay: { active: false },
+      reverb: { active: true, decay: 1.5, mix: 0.2 }
+    }
   },
   {
     id: "clocks",
@@ -336,7 +533,18 @@ const PROG_DB = [
       { s: 2, q: "min" as const, r: "ii" }
     ],
     songs: ["Clocks — Coldplay"],
-    desc: "Welliges Arpeggio-Pattern mit markant abfallendem Moll-Dominant-Wechsel."
+    desc: "Welliges Arpeggio-Pattern mit markant abfallendem Moll-Dominant-Wechsel.",
+    bpm: 121,
+    strumPattern: "arpeggio" as const,
+    drumPattern: "standard",
+    bassPattern: "syncopated",
+    currentInst: "piano",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: false },
+      delay: { active: true, time: 0.38, feedback: 0.45, mix: 0.4 },
+      reverb: { active: true, decay: 2.5, mix: 0.3 }
+    }
   },
   {
     id: "let_her_go",
@@ -349,7 +557,18 @@ const PROG_DB = [
       { s: 7, q: "maj" as const, r: "V" }
     ],
     songs: ["Let Her Go — Passenger", "All of Me (Chorus) — John Legend"],
-    desc: "Zart voranschreitende Melancholie, die das tonale Zentrum (I) meidet."
+    desc: "Zart voranschreitende Melancholie, die das tonale Zentrum (I) meidet.",
+    bpm: 75,
+    strumPattern: "arpeggio" as const,
+    drumPattern: "standard",
+    bassPattern: "root",
+    currentInst: "guitar_acoustic",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: false },
+      delay: { active: false },
+      reverb: { active: true, decay: 2.8, mix: 0.35 }
+    }
   },
   {
     id: "southern_road",
@@ -361,7 +580,90 @@ const PROG_DB = [
       { s: 0, q: "maj" as const, r: "IV" }
     ],
     songs: ["Sweet Home Alabama — Lynyrd Skynyrd", "Fortunate Son — CCR", "Werewolves of London"],
-    desc: "Ein herrlich offener Mixolydischer Vibe: I - bVII - IV (in Key G: D - C - G)."
+    desc: "Ein herrlich offener Mixolydischer Vibe: I - bVII - IV (in Key G: D - C - G).",
+    bpm: 115,
+    strumPattern: "strum" as const,
+    drumPattern: "rock",
+    bassPattern: "walk",
+    currentInst: "guitar_electric_clean",
+    pedalboard: {
+      overdrive: { active: true, drive: 0.15, tone: 0.5, volume: 0.7 },
+      chorus: { active: true, rate: 1.0, depth: 0.35, mix: 0.3 },
+      delay: { active: false },
+      reverb: { active: true, decay: 1.8, mix: 0.25 }
+    }
+  },
+  {
+    id: "around_world",
+    name: "Funk-House Groove",
+    category: "riff",
+    chords: [
+      { s: 2, q: "min" as const, r: "ii" },
+      { s: 9, q: "min" as const, r: "vi" },
+      { s: 4, q: "min" as const, r: "iii" },
+      { s: 5, q: "maj" as const, r: "IV" }
+    ],
+    songs: ["Around the World — Daft Punk", "Classic Filter House"],
+    desc: "Ein hypnotischer, treibender House-Groove mit geschmeidiger Akkordfolge.",
+    bpm: 121,
+    strumPattern: "strum" as const,
+    drumPattern: "funk",
+    bassPattern: "octave",
+    currentInst: "synth",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: true, rate: 1.8, depth: 0.45, mix: 0.4 },
+      delay: { active: true, time: 0.33, feedback: 0.3, mix: 0.25 },
+      reverb: { active: true, decay: 1.8, mix: 0.25 }
+    }
+  },
+  {
+    id: "purple_rain",
+    name: "Purple Rain Power Ballad",
+    category: "riff",
+    chords: [
+      { s: 0, q: "maj" as const, r: "I" },
+      { s: 9, q: "min" as const, r: "vi" },
+      { s: 7, q: "maj" as const, r: "V" },
+      { s: 5, q: "maj" as const, r: "IV" }
+    ],
+    songs: ["Purple Rain — Prince", "Classic Power Ballads"],
+    desc: "Die monumentale lila Ballade mit üppigem Chorus-Teppich und endlosem Delay.",
+    bpm: 76,
+    strumPattern: "strum" as const,
+    drumPattern: "standard",
+    bassPattern: "root",
+    currentInst: "guitar_electric_clean",
+    pedalboard: {
+      overdrive: { active: false },
+      chorus: { active: true, rate: 1.5, depth: 0.7, mix: 0.65 },
+      delay: { active: true, time: 0.42, feedback: 0.5, mix: 0.4 },
+      reverb: { active: true, decay: 3.5, mix: 0.4 }
+    }
+  },
+  {
+    id: "heavy_gallop",
+    name: "Metal Gallop (Aeolian Power)",
+    category: "riff",
+    chords: [
+      { s: 9, q: "min" as const, r: "i" },
+      { s: 5, q: "maj" as const, r: "VI" },
+      { s: 7, q: "maj" as const, r: "VII" },
+      { s: 9, q: "min" as const, r: "i" }
+    ],
+    songs: ["The Trooper — Iron Maiden", "Hallowed Be Thy Name"],
+    desc: "Dramatisches, treibendes Moll-Riff für galoppierende Double-Bass Metal-Grooves.",
+    bpm: 140,
+    strumPattern: "block" as const,
+    drumPattern: "rock",
+    bassPattern: "octave",
+    currentInst: "guitar_electric_dist",
+    pedalboard: {
+      overdrive: { active: true, drive: 0.95, tone: 0.65, volume: 0.75 },
+      chorus: { active: false },
+      delay: { active: true, time: 0.28, feedback: 0.2, mix: 0.2 },
+      reverb: { active: true, decay: 1.5, mix: 0.25 }
+    }
   }
 ];
 
@@ -386,6 +688,69 @@ const STRUM_OPTIONS = [
   { id: "block", label: "Block", icon: "🎹" },
   { id: "arpeggio", label: "Arp", icon: "✨" },
   { id: "strum", label: "Zupfen", icon: "🪕" }
+];
+
+const FX_PRESETS = [
+  {
+    id: "bypass",
+    name: "Dry Bypass",
+    icon: "📴",
+    desc: "Bypass / Kein Effekt",
+    settings: {
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: false, rate: 1.5, depth: 0.35, mix: 0.4 },
+      delay: { active: false, time: 0.38, feedback: 0.45, mix: 0.4 },
+      reverb: { active: false, decay: 2.2, mix: 0.35 }
+    }
+  },
+  {
+    id: "crunchy",
+    name: "Warm Crunch",
+    icon: "🔥",
+    desc: "Feine Röhrensättigung",
+    settings: {
+      overdrive: { active: true, drive: 0.52, tone: 0.6, volume: 0.8 },
+      chorus: { active: false, rate: 1.5, depth: 0.35, mix: 0.4 },
+      delay: { active: false, time: 0.38, feedback: 0.45, mix: 0.4 },
+      reverb: { active: true, decay: 1.8, mix: 0.22 }
+    }
+  },
+  {
+    id: "heavy_lead",
+    name: "Heavy Metal",
+    icon: "🤘",
+    desc: "Satt verzerrtes Brett",
+    settings: {
+      overdrive: { active: true, drive: 0.95, tone: 0.75, volume: 0.95 },
+      chorus: { active: true, rate: 1.8, depth: 0.3, mix: 0.45 },
+      delay: { active: true, time: 0.32, feedback: 0.4, mix: 0.35 },
+      reverb: { active: true, decay: 2.2, mix: 0.42 }
+    }
+  },
+  {
+    id: "dream_space",
+    name: "Dreamy Echo",
+    icon: "🌌",
+    desc: "Sphärischer Chorus-Delay",
+    settings: {
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 1.4, depth: 0.65, mix: 0.6 },
+      delay: { active: true, time: 0.55, feedback: 0.6, mix: 0.55 },
+      reverb: { active: true, decay: 3.8, mix: 0.52 }
+    }
+  },
+  {
+    id: "ambient_surf",
+    name: "Surf Spring Room",
+    icon: "🌊",
+    desc: "Surf Delay & Reverb",
+    settings: {
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 2.5, depth: 0.18, mix: 0.25 },
+      delay: { active: true, time: 0.24, feedback: 0.35, mix: 0.4 },
+      reverb: { active: true, decay: 2.8, mix: 0.5 }
+    }
+  }
 ];
 
 interface KnobProps {
@@ -458,8 +823,13 @@ export default function App() {
   const [bassPattern, setBassPattern] = useState<string>("root");
   const [drumsVolume, setDrumsVolume] = useState<number>(0.65);
   const [bassVolume, setBassVolume] = useState<number>(0.65);
+  const [drumsPitch, setDrumsPitch] = useState<number>(1.0);
+  const [bassFilterCutoff, setBassFilterCutoff] = useState<number>(350);
   const [theoryKey, setTheoryKey] = useState<number>(0);
   const [infoModalOpen, setInfoModalOpen] = useState<boolean>(false);
+  const [whatsAppImportModalOpen, setWhatsAppImportModalOpen] = useState<boolean>(false);
+  const [whatsAppImportText, setWhatsAppImportText] = useState<string>("");
+  const [whatsAppSongTitle, setWhatsAppSongTitle] = useState<string>("Mein Jam-Preset");
   const [toastMsg, setToastMsg] = useState<string>("");
   const [isFooterMinimized, setIsFooterMinimized] = useState<boolean>(false);
   const [expandedSection, setExpandedSection] = useState<"navigation" | "sequencer" | "instruments" | "style" | "trash" | null>("navigation");
@@ -473,6 +843,7 @@ export default function App() {
   });
 
   // Sound Recorder State for Timeline Recording Addon
+  const [micPermissionError, setMicPermissionError] = useState<boolean>(false);
   const [recordings, setRecordings] = useState<Array<{ id: number; name: string; url: string; buffer: AudioBuffer | null; duration: number }>>([]);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordingSeconds, setRecordingSeconds] = useState<number>(0);
@@ -606,6 +977,20 @@ export default function App() {
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(""), 2200);
+  };
+
+  const applyFxPreset = (presetId: string) => {
+    const selected = FX_PRESETS.find(p => p.id === presetId);
+    if (selected) {
+      initAudio();
+      setPedalboard({
+        overdrive: { ...selected.settings.overdrive },
+        chorus: { ...selected.settings.chorus },
+        delay: { ...selected.settings.delay },
+        reverb: { ...selected.settings.reverb }
+      });
+      showToast(`⚡ Rig geladen: ${selected.name}`);
+    }
   };
 
   const makeDistortionCurve = (amount: number) => {
@@ -913,6 +1298,248 @@ export default function App() {
           });
         });
       }
+    } else if (currentInst === "guitar_acoustic") {
+      const intervals = chordIntervals(q);
+      const baseFreq = 130.81;
+      intervals.forEach((iv, ni) => {
+        [0, 12, 24].forEach((o, oi) => {
+          const f = baseFreq * Math.pow(2, (s + iv + o) / 12);
+          const dl = pat === "strum" ? ni * 0.038 + oi * 0.008 : pat === "arpeggio" ? ni * 0.12 : 0;
+          const t = ctx.currentTime + dl;
+          
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const g = ctx.createGain();
+          const fl = ctx.createBiquadFilter();
+          
+          osc1.type = "triangle";
+          osc2.type = "sine";
+          osc1.frequency.value = f;
+          osc2.frequency.value = f * 2.01;
+          
+          fl.type = "highpass";
+          fl.frequency.value = 140;
+          
+          const v = (oi === 0 ? 0.05 : oi === 1 ? 0.03 : 0.012) / (ni + 1);
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(v, t + 0.004);
+          g.gain.exponentialRampToValueAtTime(Math.max(v * 0.2, 0.0001), t + 0.18);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+          
+          osc1.connect(fl);
+          osc2.connect(fl);
+          fl.connect(g);
+          g.connect(masterGain);
+          
+          osc1.start(t);
+          osc1.stop(t + d + 0.05);
+          osc2.start(t);
+          osc2.stop(t + d + 0.05);
+        });
+      });
+    } else if (currentInst === "guitar_electric_clean") {
+      const intervals = chordIntervals(q);
+      const baseFreq = 130.81;
+      intervals.forEach((iv, ni) => {
+        [0, 12].forEach((o, oi) => {
+          const f = baseFreq * Math.pow(2, (s + iv + o) / 12);
+          const dl = pat === "strum" ? ni * 0.035 : pat === "arpeggio" ? ni * 0.11 : 0;
+          const t = ctx.currentTime + dl;
+          
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          const fl = ctx.createBiquadFilter();
+          
+          osc.type = oi === 0 ? "sine" : "triangle";
+          osc.frequency.value = f;
+          
+          fl.type = "lowpass";
+          fl.frequency.value = 1300;
+          
+          const v = (oi === 0 ? 0.065 : 0.03) / (ni + 1);
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(v, t + 0.008);
+          g.gain.exponentialRampToValueAtTime(v * 0.5, t + 0.25);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+          
+          osc.connect(fl);
+          fl.connect(g);
+          g.connect(masterGain);
+          
+          osc.start(t);
+          osc.stop(t + d + 0.05);
+        });
+      });
+    } else if (currentInst === "guitar_electric_dist") {
+      const intervals = chordIntervals(q);
+      const baseFreq = 130.81 - 12;
+      intervals.forEach((iv, ni) => {
+        [-3, 0, 3].forEach((dt, oi) => {
+          const f = baseFreq * Math.pow(2, (s + iv) / 12);
+          const dl = pat === "strum" ? ni * 0.025 : pat === "arpeggio" ? ni * 0.09 : 0;
+          const t = ctx.currentTime + dl;
+          
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          const ampFilter = ctx.createBiquadFilter();
+          const preGain = ctx.createGain();
+          const distNode = ctx.createWaveShaper();
+          
+          osc.type = "sawtooth";
+          osc.frequency.value = f;
+          osc.detune.value = dt * 1.8;
+          
+          ampFilter.type = "peaking";
+          ampFilter.frequency.setValueAtTime(2200, t);
+          ampFilter.Q.value = 1.2;
+          ampFilter.gain.setValueAtTime(8, t);
+          
+          preGain.gain.setValueAtTime(3.0, t);
+          
+          distNode.curve = makeDistortionCurve(75);
+          distNode.oversample = "4x";
+          
+          const v = 0.045 / (oi + 1);
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(v, t + 0.005);
+          g.gain.linearRampToValueAtTime(v * 0.8, t + 0.08);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+          
+          osc.connect(preGain);
+          preGain.connect(distNode);
+          distNode.connect(ampFilter);
+          ampFilter.connect(g);
+          g.connect(masterGain);
+          
+          osc.start(t);
+          osc.stop(t + d + 0.05);
+        });
+      });
+    } else if (currentInst === "sax") {
+      const intervals = chordIntervals(q);
+      const baseFreq = 261.63 - 12;
+      intervals.forEach((iv, ni) => {
+        const f = baseFreq * Math.pow(2, (s + iv) / 12);
+        const t = ctx.currentTime;
+        
+        [0.99, 1.0, 1.01].forEach((detuneRate, oi) => {
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          const fl = ctx.createBiquadFilter();
+          
+          osc.type = oi === 1 ? "sawtooth" : "triangle";
+          osc.frequency.value = f * detuneRate;
+          
+          const lfo = ctx.createOscillator();
+          const lfoGain = ctx.createGain();
+          lfo.frequency.value = 5.4;
+          lfoGain.gain.value = f * 0.012;
+          lfo.connect(lfoGain);
+          lfoGain.connect(osc.frequency);
+          lfo.start(t);
+          lfo.stop(t + d + 0.05);
+          
+          fl.type = "bandpass";
+          fl.frequency.setValueAtTime(250, t);
+          fl.frequency.exponentialRampToValueAtTime(1500, t + 0.12);
+          fl.frequency.exponentialRampToValueAtTime(950, t + d);
+          fl.Q.value = 1.3;
+          
+          let subOsc: OscillatorNode | null = null;
+          let subGain: GainNode | null = null;
+          if (oi === 1) {
+            subOsc = ctx.createOscillator();
+            subGain = ctx.createGain();
+            subOsc.type = "sine";
+            subOsc.frequency.value = f * 0.5;
+            subGain.gain.setValueAtTime(0, t);
+            subGain.gain.linearRampToValueAtTime(0.012, t + 0.1);
+            subGain.gain.exponentialRampToValueAtTime(0.0001, t + d);
+            subOsc.connect(subGain);
+            subGain.connect(masterGain);
+            subOsc.start(t);
+            subOsc.stop(t + d + 0.05);
+          }
+          
+          const v = 0.024 / (oi + 1);
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(v, t + 0.12);
+          g.gain.setValueAtTime(v, t + d - 0.22);
+          g.gain.linearRampToValueAtTime(0.0001, t + d);
+          
+          osc.connect(fl);
+          fl.connect(g);
+          g.connect(masterGain);
+          
+          osc.start(t);
+          osc.stop(t + d + 0.05);
+        });
+      });
+    } else if (currentInst === "djembe") {
+      const intervals = chordIntervals(q);
+      const baseFreq = 70;
+      intervals.forEach((iv, ni) => {
+        const f = baseFreq * Math.pow(2, (s + iv) / 12);
+        const dl = pat === "strum" ? ni * 0.07 : pat === "arpeggio" ? ni * 0.13 : 0;
+        const t = ctx.currentTime + dl;
+        
+        const oscThud = ctx.createOscillator();
+        const gThud = ctx.createGain();
+        oscThud.type = "sine";
+        oscThud.frequency.setValueAtTime(f, t);
+        oscThud.frequency.exponentialRampToValueAtTime(f * 0.45, t + 0.12);
+        
+        gThud.gain.setValueAtTime(0, t);
+        gThud.gain.linearRampToValueAtTime(0.28, t + 0.003);
+        gThud.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        
+        oscThud.connect(gThud);
+        gThud.connect(masterGain);
+        oscThud.start(t);
+        oscThud.stop(t + 0.3);
+        
+        const oscSlap = ctx.createOscillator();
+        const gSlap = ctx.createGain();
+        const noiseGen = ctx.createBufferSource();
+        const noiseGain = ctx.createGain();
+        const noiseFilter = ctx.createBiquadFilter();
+        
+        oscSlap.type = "triangle";
+        oscSlap.frequency.setValueAtTime(f * 3.8, t);
+        oscSlap.frequency.exponentialRampToValueAtTime(f * 1.6, t + 0.05);
+        
+        gSlap.gain.setValueAtTime(0, t);
+        gSlap.gain.linearRampToValueAtTime(0.18, t + 0.002);
+        gSlap.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+        
+        const bufferSize = ctx.sampleRate * 0.04;
+        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const outputBuffer = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          outputBuffer[i] = Math.random() * 2 - 1;
+        }
+        noiseGen.buffer = noiseBuffer;
+        
+        noiseFilter.type = "bandpass";
+        noiseFilter.frequency.setValueAtTime(2000, t);
+        noiseFilter.Q.value = 2.0;
+        
+        noiseGain.gain.setValueAtTime(0, t);
+        noiseGain.gain.linearRampToValueAtTime(0.09, t + 0.001);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+        
+        noiseGen.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(masterGain);
+        
+        oscSlap.connect(gSlap);
+        gSlap.connect(masterGain);
+        
+        oscSlap.start(t);
+        oscSlap.stop(t + 0.12);
+        noiseGen.start(t);
+        noiseGen.stop(t + 0.12);
+      });
     } else if (currentInst === "piano") {
       const intervals = chordIntervals(q);
       const baseFreq = 261.63;
@@ -1071,8 +1698,8 @@ export default function App() {
     if (!ctx || !masterGain) return;
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
-    osc.frequency.setValueAtTime(150, time);
-    osc.frequency.exponentialRampToValueAtTime(50, time + 0.08);
+    osc.frequency.setValueAtTime(150 * drumsPitch, time);
+    osc.frequency.exponentialRampToValueAtTime(50 * drumsPitch, time + 0.08);
     g.gain.setValueAtTime(0.55 * drumsVolume, time);
     g.gain.exponentialRampToValueAtTime(0.0001, time + 0.3);
     osc.connect(g);
@@ -1091,7 +1718,7 @@ export default function App() {
     const ng = ctx.createGain();
     const nf = ctx.createBiquadFilter();
     nf.type = "highpass";
-    nf.frequency.value = 1200;
+    nf.frequency.value = 1200 * drumsPitch;
     ng.gain.setValueAtTime(0.28 * drumsVolume, time);
     ng.gain.exponentialRampToValueAtTime(0.0001, time + 0.18);
     ns.connect(nf);
@@ -1102,7 +1729,7 @@ export default function App() {
 
     const o = ctx.createOscillator();
     const g = ctx.createGain();
-    o.frequency.value = 180;
+    o.frequency.value = 180 * drumsPitch;
     g.gain.setValueAtTime(0.2 * drumsVolume, time);
     g.gain.exponentialRampToValueAtTime(0.0001, time + 0.08);
     o.connect(g);
@@ -1121,7 +1748,7 @@ export default function App() {
     const g = ctx.createGain();
     const f = ctx.createBiquadFilter();
     f.type = "highpass";
-    f.frequency.value = 7000;
+    f.frequency.value = Math.min(19500, 7000 * drumsPitch);
     const d = open ? 0.12 : 0.06;
     g.gain.setValueAtTime((open ? 0.1 : 0.07) * drumsVolume, time);
     g.gain.exponentialRampToValueAtTime(0.0001, time + d);
@@ -1164,7 +1791,7 @@ export default function App() {
     o.type = "sawtooth";
     o.frequency.value = f;
     fl.type = "lowpass";
-    fl.frequency.value = 350;
+    fl.frequency.value = bassFilterCutoff;
     g.gain.setValueAtTime(0, time);
     g.gain.linearRampToValueAtTime(0.12 * bassVolume, time + 0.01);
     g.gain.setValueAtTime(0.12 * bassVolume, time + dur - 0.05);
@@ -1337,6 +1964,7 @@ export default function App() {
     initAudio();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setMicPermissionError(false);
       recordedChunksRef.current = [];
       
       let options = {};
@@ -1397,6 +2025,7 @@ export default function App() {
 
     } catch (err) {
       console.error("Could not capture audio stream", err);
+      setMicPermissionError(true);
       showToast("Aufnahme fehlgeschlagen. Überprüfe die Mikrofon-Freigabe.");
     }
   };
@@ -1474,7 +2103,7 @@ export default function App() {
     const currentTimeline = timelineRef.current;
     if (!currentTimeline.length) return "";
     const keyName = CO5_MAJ[selKeyIdx] + " / " + CO5_MIN[selKeyIdx];
-    const capoText = capo > 0 ? `\n🧢 Capo: Fret ${capo}` : "";
+    const capoText = capo > 0 ? `\n🧢 Capo: Bund ${capo}` : "";
     let parts: string[] = [];
     let currentPart = "";
 
@@ -1489,7 +2118,48 @@ export default function App() {
     });
     if (currentPart) parts.push(currentPart);
 
-    return `🎸 *ChordWood Progression*\n━━━━━━━━━━━━━━━\n🎵 Tonart: ${keyName}${capoText}\n⏱ BPM: ${bpm} | ⏰ ${beatsPerBar}/4 | 🪕 ${strumPattern}\n━━━━━━━━━━━━━━━\n${parts.join("\n")}\n━━━━━━━━━━━━━━━\n🤘 Viel Spaß beim Songwriting!`;
+    // Create a lean package of all audio/arranger configurations
+    const dataObj = {
+      v: 2,
+      title: whatsAppSongTitle || "Mein Jam-Preset",
+      bpm,
+      currentInst,
+      drumsOn,
+      basslineOn,
+      beatsPerBar,
+      strumPattern,
+      drumPattern,
+      bassPattern,
+      drumsVolume,
+      bassVolume,
+      drumsPitch,
+      bassFilterCutoff,
+      pedalboard,
+      timeline: currentTimeline.map(item => ({
+        type: item.type,
+        name: item.name,
+        semitone: item.semitone,
+        quality: item.quality,
+        suffix: item.suffix,
+        roman: item.roman,
+        id: item.id,
+        duration: item.duration
+      }))
+    };
+
+    let base64Code = "";
+    try {
+      const jsonStr = JSON.stringify(dataObj);
+      base64Code = btoa(unescape(encodeURIComponent(jsonStr)));
+    } catch (e) {
+      console.error("Fehler beim Serialisieren der Teilen-Daten:", e);
+    }
+
+    const importSection = base64Code 
+      ? `\n\n📲 *Schnell-Import (Diesen GESAMTEN Text kopieren und in der App unter "WhatsApp-Import" einfügen!)*\n--- CHORDS_IMPORT_DATA_START ---\n${base64Code}\n--- CHORDS_IMPORT_DATA_END ---`
+      : "";
+
+    return `🎸 _Arrangement: *${whatsAppSongTitle}*_\n━━━━━━━━━━━━━━━━━━━━\n🎵 Tonart: ${keyName}${capoText}\n⏱ Tempo: ${bpm} BPM | ⏰ ${beatsPerBar}/4 Takt | 🪕 Style: ${strumPattern}\n━━━━━━━━━━━━━━━━━━━━\n${parts.join("\n")}\n━━━━━━━━━━━━━━━━━━━━\n🤘 Erstellt mit der Akkord-App!${importSection}`;
   };
 
   const copyProgression = () => {
@@ -1500,7 +2170,7 @@ export default function App() {
     }
     navigator.clipboard
       .writeText(text)
-      .then(() => showToast("Akkordfolge kopiert!"))
+      .then(() => showToast("Akkordfolge & Import-Code kopiert!"))
       .catch(() => showToast("Kopieren fehlgeschlagen"));
   };
 
@@ -1511,6 +2181,72 @@ export default function App() {
       return;
     }
     window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+  };
+
+  const importFromWhatsApp = (text: string) => {
+    if (!text || !text.trim()) {
+      showToast("Bitte füge zuerst einen Text ein!");
+      return;
+    }
+
+    const regex = /--- CHORDS_IMPORT_DATA_START ---\s*([\s\S]*?)\s*--- CHORDS_IMPORT_DATA_END ---/;
+    const match = text.match(regex);
+    let finalCode = "";
+    
+    if (match) {
+      finalCode = match[1].trim();
+    } else {
+      // Fallback: If copy was partial or just the raw base64 string
+      finalCode = text.trim();
+    }
+
+    try {
+      const jsonStr = decodeURIComponent(escape(atob(finalCode)));
+      const imported = JSON.parse(jsonStr);
+
+      if (imported.timeline && Array.isArray(imported.timeline)) {
+        // Stop playing to transition safely
+        stopPlay();
+        
+        // Load chords
+        setTimeline(imported.timeline);
+        
+        // Restore all music configs
+        if (typeof imported.bpm === "number") setBpm(imported.bpm);
+        if (typeof imported.currentInst === "string") setCurrentInst(imported.currentInst);
+        if (typeof imported.drumsOn === "boolean") setDrumsOn(imported.drumsOn);
+        if (typeof imported.basslineOn === "boolean") setBasslineOn(imported.basslineOn);
+        if (imported.beatsPerBar === 3 || imported.beatsPerBar === 4) setBeatsPerBar(imported.beatsPerBar);
+        if (typeof imported.strumPattern === "string") setStrumPattern(imported.strumPattern as any);
+        if (typeof imported.drumPattern === "string") setDrumPattern(imported.drumPattern);
+        if (typeof imported.bassPattern === "string") setBassPattern(imported.bassPattern);
+        if (typeof imported.drumsVolume === "number") setDrumsVolume(imported.drumsVolume);
+        if (typeof imported.bassVolume === "number") setBassVolume(imported.bassVolume);
+        if (typeof imported.drumsPitch === "number") setDrumsPitch(imported.drumsPitch);
+        if (typeof imported.bassFilterCutoff === "number") setBassFilterCutoff(imported.bassFilterCutoff);
+        
+        if (imported.pedalboard) {
+          setPedalboard({
+            overdrive: { ...pedalboard.overdrive, ...imported.pedalboard.overdrive },
+            chorus: { ...pedalboard.chorus, ...imported.pedalboard.chorus },
+            delay: { ...pedalboard.delay, ...imported.pedalboard.delay },
+            reverb: { ...pedalboard.reverb, ...imported.pedalboard.reverb }
+          });
+        }
+        
+        if (imported.title) {
+          setWhatsAppSongTitle(imported.title);
+        }
+
+        showToast(`🎉 "${imported.title || "Geteilter Song"}" erfolgreich geladen!`);
+        setWhatsAppImportModalOpen(false);
+        setWhatsAppImportText("");
+      } else {
+        showToast("❌ Ungültiger Import-Datenblock.");
+      }
+    } catch (e) {
+      showToast("❌ Import fehlgeschlagen. Überprüfe den Text.");
+    }
   };
 
   // Playback Loop Engine
@@ -1620,8 +2356,36 @@ export default function App() {
       };
     });
     setTimeline(newChords);
+
+    // Apply progression-specific presets
+    if (p.bpm) {
+      setBpm(p.bpm);
+    }
+    if (p.strumPattern) {
+      setStrumPattern(p.strumPattern);
+    }
+    if (p.drumPattern) {
+      setDrumPattern(p.drumPattern);
+    }
+    if (p.bassPattern) {
+      setBassPattern(p.bassPattern);
+    }
+    if (p.currentInst) {
+      setCurrentInst(p.currentInst);
+    }
+    if (p.pedalboard) {
+      setPedalboard({
+        overdrive: { ...pedalboard.overdrive, ...p.pedalboard.overdrive, active: p.pedalboard.overdrive?.active ?? false },
+        chorus: { ...pedalboard.chorus, ...p.pedalboard.chorus, active: p.pedalboard.chorus?.active ?? false },
+        delay: { ...pedalboard.delay, ...p.pedalboard.delay, active: p.pedalboard.delay?.active ?? false },
+        reverb: { ...pedalboard.reverb, ...p.pedalboard.reverb, active: p.pedalboard.reverb?.active ?? false }
+      });
+    }
+
     setTab("songwriter");
-    showToast(`${p.name} geladen!`);
+    const styleLabel = p.strumPattern === "strum" ? "Zupfen" : p.strumPattern === "arpeggio" ? "Arpeggio" : "Block";
+    const extraInfo = p.bpm ? ` (${p.bpm} BPM, ${styleLabel})` : "";
+    showToast(`${p.name} geladen!${extraInfo}`);
   };
 
   // Append Progression Template
@@ -1711,6 +2475,7 @@ export default function App() {
           autoGainControl: false
         }
       });
+      setMicPermissionError(false);
       tunerStreamRef.current = stream;
       const ctx = audioContextRef.current;
       if (!ctx) return;
@@ -1721,6 +2486,7 @@ export default function App() {
       tunerAnalyserRef.current = analyser;
       setIsTunerRunning(true);
     } catch (err) {
+      setMicPermissionError(true);
       showToast("Mikrofonzugriff verweigert oder nicht unterstützt");
     }
   };
@@ -1900,8 +2666,8 @@ export default function App() {
         </header>
 
         {/* Tab Selection */}
-        <div className="flex justify-center mb-10 overflow-x-auto w-full scrollbar-none py-1">
-          <div className="relative flex rounded-2xl bg-[#120a04]/90 p-1 border border-[#4a3828]/60 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-md select-none shrink-0 gap-1 md:gap-0">
+        <div className="sticky top-0 z-50 bg-[#1a1008]/95 backdrop-blur-md py-3.5 -mx-4 px-4 md:-mx-6 md:px-6 border-b border-[#4a3828]/45 mb-8 flex justify-center overflow-x-auto w-full scrollbar-none shadow-md">
+          <div className="relative flex rounded-2xl bg-[#120a04]/95 p-1 border border-[#4a3828]/60 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-md select-none shrink-0 gap-1 md:gap-0">
             {[
               { id: "songwriter" as const, label: "Songwriter", icon: <Guitar size={15} /> },
               { id: "theorie" as const, label: "Theorie", icon: <BookOpen size={15} /> },
@@ -1914,7 +2680,7 @@ export default function App() {
                 <button
                   key={item.id}
                   onClick={() => changeTab(item.id)}
-                  className={`relative flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-xl text-xs sm:text-sm font-black tracking-wide uppercase transition-all duration-300 cursor-pointer z-10 ${
+                  className={`relative flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 px-2.5 sm:px-4 md:px-6 py-2 md:py-3 rounded-xl text-[10px] sm:text-xs md:text-sm font-black tracking-wide uppercase transition-all duration-300 cursor-pointer z-10 ${
                     isActive
                       ? "text-[#1a1008]"
                       : "text-[#7a6a58] hover:text-[#c8b8a4]"
@@ -1928,7 +2694,7 @@ export default function App() {
                     />
                   )}
                   {item.icon}
-                  <span className="hidden sm:inline">{item.label}</span>
+                  <span className="inline-block text-[9px] sm:text-[11px] md:text-xs font-mono font-black">{item.label}</span>
                 </button>
               );
             })}
@@ -2283,6 +3049,47 @@ export default function App() {
                             </span>
                           ))}
                         </div>
+
+                        {/* Preset Badges for tempo, style, patterns */}
+                        <div className="flex flex-wrap items-center gap-1.5 mb-2 mt-1">
+                          {p.bpm && (
+                            <span className="text-[10px] bg-[#2a1e10] border border-[#4a3828] px-2 py-0.5 rounded-md text-[#d4943c] font-mono flex items-center gap-1" title="Preset BPM">
+                              ⏱️ {p.bpm} BPM
+                            </span>
+                          )}
+                          {p.currentInst && (
+                            <span className="text-[10px] bg-[#2a1e10] border border-[#4a3828] px-2 py-0.5 rounded-md text-[#c8b8a4] flex items-center gap-1" title="Preset Instrument">
+                              🎸 {p.currentInst === "piano" ? "Klavier" : p.currentInst === "guitar" ? "Akustik Git." : p.currentInst === "guitar_acoustic" ? "Western Git." : p.currentInst === "guitar_electric_clean" ? "E-Gitarre Clean" : p.currentInst === "guitar_electric_dist" ? "E-Gitarre Dist" : p.currentInst === "strings" ? "Streicher" : "Synthesizer"}
+                            </span>
+                          )}
+                          {p.strumPattern && (
+                            <span className="text-[10px] bg-[#2a1e10] border border-[#4a3828] px-2 py-0.5 rounded-md text-[#c8b8a4] flex items-center gap-1" title="Preset Begleitung">
+                              🎶 {p.strumPattern === "strum" ? "Zupfen" : p.strumPattern === "arpeggio" ? "Arpeggio" : "Blockakkorde"}
+                            </span>
+                          )}
+                          {p.drumPattern && p.drumPattern !== "standard" && (
+                            <span className="text-[10px] bg-[#2a1e10] border border-[#4a3828] px-2 py-0.5 rounded-md text-[#c8b8a4] flex items-center gap-1" title="Preset Drum Beat">
+                              🥁 {p.drumPattern === "rock" ? "Rockbeat" : p.drumPattern === "funk" ? "Funk Groove" : p.drumPattern === "trap" ? "Trap Rhythm" : p.drumPattern === "latin" ? "Bossa Rhythm" : p.drumPattern}
+                            </span>
+                          )}
+                          {p.bassPattern && p.bassPattern !== "root" && (
+                            <span className="text-[10px] bg-[#2a1e10] border border-[#4a3828] px-2 py-0.5 rounded-md text-[#c8b8a4] flex items-center gap-1" title="Preset Basslauf">
+                              ⚡ Bass: {p.bassPattern === "walk" ? "Walking" : p.bassPattern === "melodic" ? "Melodic" : p.bassPattern === "syncopated" ? "Syncopated" : p.bassPattern === "octave" ? "Octave" : p.bassPattern}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Preset Pedalboard FX active lights */}
+                        {p.pedalboard && (
+                          <div className="flex flex-wrap items-center gap-2 mb-3 text-[10px] text-[#7a6a58] bg-[#120a05] px-2 py-1 rounded-lg border border-[#4a3828]/40 w-fit">
+                            <span className="font-semibold text-[#8a7a68]">Presets:</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] flex items-center gap-0.5 ${p.pedalboard.overdrive?.active ? 'text-[#e85c33] bg-[#e85c33]/15 font-bold border border-[#e85c33]/20' : 'opacity-25'}`}>⚡ OD</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] flex items-center gap-0.5 ${p.pedalboard.chorus?.active ? 'text-[#3393e8] bg-[#3393e8]/15 font-bold border border-[#3393e8]/20' : 'opacity-25'}`}>🌀 Cho</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] flex items-center gap-0.5 ${p.pedalboard.delay?.active ? 'text-[#33e8a3] bg-[#33e8a3]/15 font-bold border border-[#33e8a3]/20' : 'opacity-25'}`}>⏳ Dly</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] flex items-center gap-0.5 ${p.pedalboard.reverb?.active ? 'text-[#a333e8] bg-[#a333e8]/15 font-bold border border-[#a333e8]/20' : 'opacity-25'}`}>🌌 Rev</span>
+                          </div>
+                        )}
+
                         <p className="text-xs text-[#7a6a58] leading-relaxed mb-3">
                           {p.desc}
                         </p>
@@ -2321,6 +3128,28 @@ export default function App() {
               transition={{ duration: 0.25 }}
               className="max-w-sm mx-auto"
             >
+              {micPermissionError && (
+                <div className="mb-4 text-left p-4 rounded-2xl bg-[#b84a32]/10 border border-[#b84a32]/40 text-xs text-[#f0e0cc] shadow-md">
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-base text-red-400">⚠️</span>
+                    <div>
+                      <p className="font-extrabold text-red-400 mb-1">Mikrofon-Zugriff blockiert</p>
+                      <p className="leading-relaxed opacity-95 mb-3">
+                        Da diese Web-App in einem eingebetteten Vorschau-Fenster (Iframe) läuft, blockiert dein Browser möglicherweise den Zugriff auf dein Mikrofon.
+                      </p>
+                      <a 
+                        href={window.location.href} 
+                        target="_blank" 
+                        rel="noreferrer noopener"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 font-bold rounded-xl bg-[#b84a32] text-white hover:bg-[#b84a32]/90 transition-all font-mono uppercase text-[9px] tracking-wider no-underline"
+                      >
+                        🚀 In neuem Tab öffnen
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="rounded-2xl bg-[#2a1e10] border border-[#4a3828] p-6 text-center shadow-xl">
                 {/* Gauge visualization using SVG for precise smooth needle movement */}
                 <div className="relative h-32 w-full flex items-center justify-center">
@@ -2433,6 +3262,40 @@ export default function App() {
                 </div>
                 <div className="flex gap-2 text-xs font-bold text-[#c8b8a4] bg-[#120a04] px-4 py-1.5 rounded-lg border border-[#4a3828]/50">
                   <span className="flex items-center gap-1.5"><Sliders size={12} className="text-[#a89880]" /> 4-Pedal DaisyChain</span>
+                </div>
+              </div>
+
+              {/* Mobile-Friendly Quick Presets Selector Bar */}
+              <div className="bg-[#1c110a] border-x border-[#4a3828] border-b-0 p-4 flex flex-col md:flex-row items-center justify-between gap-3 shadow-inner">
+                <div className="flex items-center gap-2 self-start md:self-auto">
+                  <span className="text-xs font-mono font-bold text-[#a89880] uppercase tracking-wider flex items-center gap-1.5">
+                    🎛️ Quick Mobile FX Rig/Preset:
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 w-full md:w-auto">
+                  {FX_PRESETS.map((p) => {
+                    const isCurrent = (
+                      pedalboard.overdrive.active === p.settings.overdrive.active &&
+                      pedalboard.chorus.active === p.settings.chorus.active &&
+                      pedalboard.delay.active === p.settings.delay.active &&
+                      pedalboard.reverb.active === p.settings.reverb.active
+                    );
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => applyFxPreset(p.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap ${
+                          isCurrent 
+                            ? "bg-[#d4943c] text-[#1a1008] border border-[#d4943c]"
+                            : "bg-[#120a04] border border-[#4a3828] text-[#a89880] hover:text-[#f0e0cc] hover:border-[#d4943c]"
+                        }`}
+                        title={p.desc}
+                      >
+                        <span className="text-[13px]">{p.icon}</span>
+                        <span>{p.name}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -2689,6 +3552,28 @@ export default function App() {
               transition={{ duration: 0.25 }}
               className="max-w-2xl mx-auto"
             >
+              {micPermissionError && (
+                <div className="mb-4 text-left p-4 rounded-2xl bg-[#b84a32]/10 border border-[#b84a32]/40 text-xs text-[#f0e0cc] shadow-md">
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-base text-red-400">⚠️</span>
+                    <div>
+                      <p className="font-extrabold text-red-400 mb-1">Mikrofon-Zugriff blockiert</p>
+                      <p className="leading-relaxed opacity-95 mb-3">
+                        Da diese Web-App in einem eingebetteten Vorschau-Fenster (Iframe) läuft, blockiert dein Browser möglicherweise den Zugriff auf dein Mikrofon.
+                      </p>
+                      <a 
+                        href={window.location.href} 
+                        target="_blank" 
+                        rel="noreferrer noopener"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 font-bold rounded-xl bg-[#b84a32] text-white hover:bg-[#b84a32]/90 transition-all font-mono uppercase text-[9px] tracking-wider no-underline"
+                      >
+                        🚀 In neuem Tab öffnen
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="rounded-2xl bg-[#2a1e10] border border-[#4a3828] p-6 shadow-xl text-center relative overflow-hidden">
                 {/* Visual cassette tape wheels */}
                 <div className="flex justify-center items-center gap-6 mb-8 bg-[#120a04] rounded-2xl p-6 border border-[#4a3828]/55 shadow-inner relative">
@@ -2848,23 +3733,62 @@ export default function App() {
       </div>
 
       {/* Persistent Audio Rack Controller Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-[#2a1e10] border-t-2 border-[#4a3828] z-40 select-none shadow-[0_-10px_30px_rgba(0,0,0,0.8)] pb-4 md:pb-6">
-        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-4 relative">
-          {/* Collapse/Expand Toggle Tab */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#2a1e10] border-t-2 border-[#4a3828] z-40 select-none shadow-[0_-12px_35px_rgba(0,0,0,0.95)] pb-4 md:pb-6 transition-all duration-300">
+        {/* Full-width elegant click-to-minimize console title bar */}
+        <div 
+          onClick={() => setIsFooterMinimized(!isFooterMinimized)}
+          className="bg-[#1a1008] border-b border-[#4a3828] px-4 py-2.5 flex items-center justify-between cursor-pointer hover:bg-[#22160d] transition-all"
+          title="Klicken, um die Konsole zu minimieren/maximieren"
+        >
+          {/* Mock Console Windows Control Dots on Left */}
+          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <button 
+              onClick={() => setIsFooterMinimized(true)}
+              className="w-3 h-3 rounded-full bg-[#b84a32] hover:bg-red-400 active:scale-95 transition-all outline-none border-0 cursor-pointer" 
+              title="Minimieren"
+            />
+            <button 
+              onClick={() => setIsFooterMinimized(true)}
+              className="w-3 h-3 rounded-full bg-[#d4943c] hover:bg-yellow-400 active:scale-95 transition-all outline-none border-0 cursor-pointer" 
+              title="Minimieren"
+            />
+            <button 
+              onClick={() => setIsFooterMinimized(false)}
+              className="w-3 h-3 rounded-full bg-[#4a9e5c] hover:bg-green-400 active:scale-95 transition-all outline-none border-0 cursor-pointer" 
+              title="Maximieren"
+            />
+          </div>
+
+          {/* Console designation */}
+          <div className="flex items-center gap-2 text-[10px] sm:text-xs font-mono font-extrabold text-[#d4943c] tracking-widest uppercase">
+            <span className="animate-pulse">🔴</span>
+            <span>DSP CONSOLE & CHROMATIC SEQUENCER</span>
+            <span className="hidden md:inline text-[#7a6a58] font-normal lowercase tracking-normal">
+              — {isFooterMinimized ? "klicken zum Maximieren ↗" : "klicken zum Minimieren ↘"}
+            </span>
+          </div>
+
+          {/* Touch target Toggle Icon on the right */}
           <button
-            onClick={() => setIsFooterMinimized(!isFooterMinimized)}
-            className="absolute -top-[36px] right-6 bg-[#25D366] text-[#1a1008] text-[10px] font-black tracking-wider uppercase px-4 py-2 rounded-t-xl z-50 flex items-center gap-1.5 cursor-pointer transition-all hover:bg-[#20ba59] hover:text-white shadow-[0_-4px_12px_rgba(37,211,102,0.45)] border-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsFooterMinimized(!isFooterMinimized);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all border-0 cursor-pointer bg-[#2a1e10] text-[#a89880] hover:text-[#d4943c] border border-[#4a3828]/60"
           >
             {isFooterMinimized ? (
               <>
-                <ChevronUp size={12} className="font-extrabold" /> Control Rack maximieren
+                <ChevronUp size={12} className="stroke-[3]" /> MAXIMIEREN
               </>
             ) : (
               <>
-                <ChevronDown size={12} className="font-extrabold" /> Control Rack minimieren
+                <ChevronDown size={12} className="stroke-[3]" /> MINIMIEREN
               </>
             )}
           </button>
+        </div>
+
+        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-4 relative">
 
           {isFooterMinimized ? (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-1.5">
@@ -2886,7 +3810,18 @@ export default function App() {
                     Rack {playing ? "spielt..." : "bereit"}
                   </span>
                   <span className="text-xs font-bold text-[#f0e0cc]">
-                    {timeline.length} Akkorde • {bpm} BPM • {currentInst === "piano" ? "🎹 Piano" : currentInst === "guitar" ? "🎸 Gitarre" : currentInst === "ukulele" ? "🪕 Ukulele" : currentInst === "strings" ? "🎻 Strings" : currentInst === "synth" ? "🎛️ Synth" : "🎸 Bass"}
+                    {timeline.length} Akkorde • {bpm} BPM • {
+                      currentInst === "piano" ? "🎹 Piano" : 
+                      currentInst === "guitar" ? "🎸 Classical" : 
+                      currentInst === "guitar_acoustic" ? "🪕 Acoustic Steel" : 
+                      currentInst === "guitar_electric_clean" ? "🎸 Electric Clean" : 
+                      currentInst === "guitar_electric_dist" ? "⚡ Heavy Dist." : 
+                      currentInst === "sax" ? "🎷 Saxophon" : 
+                      currentInst === "djembe" ? "🪘 Djembe" : 
+                      currentInst === "ukulele" ? "🪕 Ukulele" : 
+                      currentInst === "strings" ? "🎻 Strings" : 
+                      currentInst === "synth" ? "🎛️ Synth" : "🎸 Bass"
+                    }
                   </span>
                 </div>
               </div>
@@ -2950,13 +3885,22 @@ export default function App() {
               {/* Right Side: Quick share action buttons */}
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <button
+                  onClick={() => setWhatsAppImportModalOpen(true)}
+                  title="WhatsApp Song importieren"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer bg-[#4a9e5c]/25 border border-[#4a9e5c] text-[#6fc888] hover:bg-[#4a9e5c]/35 shrink-0"
+                >
+                  📥 Import
+                </button>
+                <button
                   onClick={copyProgression}
+                  title="Akkorde & Import-Code kopieren"
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-[#1a1008] border border-[#4a3828] text-[#c8b8a4] hover:text-[#d4943c] hover:border-[#d4943c]"
                 >
                   <Copy size={12} />
                 </button>
                 <button
                   onClick={shareWhatsApp}
+                  title="Mit WhatsApp teilen"
                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-[#25D366]/20 border border-[#25D366] text-[#25D366] hover:bg-[#25D366]/35"
                 >
                   <Share2 size={12} />
@@ -2972,18 +3916,23 @@ export default function App() {
                 </span>
                 {[
                   { id: "piano", label: "Piano", icon: <Music size={12} /> },
-                  { id: "guitar", label: "Gitarre", icon: <Guitar size={12} /> },
+                  { id: "guitar", label: "Classical", icon: <Guitar size={12} /> },
+                  { id: "guitar_acoustic", label: "Acoustic Steel", icon: <Guitar size={12} className="text-[#f59e0b]" /> },
+                  { id: "guitar_electric_clean", label: "Electric Clean", icon: <Guitar size={12} className="text-cyan-400" /> },
+                  { id: "guitar_electric_dist", label: "Heavy Dist.", icon: <Guitar size={12} className="text-red-500" /> },
+                  { id: "sax", label: "Saxophon", icon: <Music size={12} className="text-yellow-500" /> },
+                  { id: "djembe", label: "Djembe", icon: <Drum size={12} /> },
                   { id: "ukulele", label: "Ukulele", icon: <Sliders size={12} /> },
                   { id: "strings", label: "Strings", icon: <Waves size={12} /> },
                   { id: "synth", label: "Synth", icon: <SlidersHorizontal size={12} /> },
-                  { id: "bass", label: "Bass", icon: <Music size={12} /> }
+                  { id: "bass", label: "Bass", icon: <Volume2 size={12} /> }
                 ].map((inst) => (
                   <button
                     key={inst.id}
                     onClick={() => setCurrentInst(inst.id)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                       currentInst === inst.id
-                        ? "bg-[#d4943c] text-[#1a1008] font-black"
+                        ? "bg-[#d4943c] text-[#1a1008] font-black animate-pulse"
                         : "bg-[#1a1008] border border-[#4a3828] text-[#7a6a58] hover:text-[#f0e0cc]"
                     }`}
                   >
@@ -3110,8 +4059,8 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Row 3: Advanced Drum & Bass Rhythm Configs (Slick iOS Channel Strip Layout) */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 pb-3 border-b border-[#4a3828]/40">
+              {/* Row 3: Advanced Drum & Bass & FX Rhythm Configs (Slick iOS Channel Strip Layout) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-4 pb-3 border-b border-[#4a3828]/40">
                 {/* Channel Strip 1: Drums System */}
                 <div className="bg-[#1f130a] border border-[#4a3828]/50 p-3 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-inner">
                   <div className="flex items-center gap-3 shrink-0 justify-between md:justify-start">
@@ -3139,22 +4088,45 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Volume Slider Section */}
-                  <div className="flex items-center gap-2 bg-[#120a04]/40 px-2.5 py-1.5 rounded-xl border border-[#4a3828]/30 max-w-full md:max-w-[140px] grow">
-                    <Volume2 size={12} className={drumsOn ? "text-[#d4943c]" : "text-neutral-600"} />
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.05"
-                      value={drumsVolume}
-                      onChange={(e) => setDrumsVolume(Number(e.target.value))}
-                      className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize"
-                      disabled={!drumsOn}
-                    />
-                    <span className="text-[10px] font-mono font-extrabold text-[#d4943c] w-6 text-right">
-                      {Math.round(drumsVolume * 100)}%
-                    </span>
+                  {/* Volume Slider Section & Extra Desktop Sliders */}
+                  <div className="flex flex-col gap-1.5 grow max-w-full md:max-w-[280px]">
+                    {/* Primary volume slider */}
+                    <div className="flex items-center gap-2 bg-[#120a04]/40 px-2.5 py-1.5 rounded-xl border border-[#4a3828]/30 w-full hover:border-[#d4943c]/35 transition-colors">
+                      <Volume2 size={12} className={drumsOn ? "text-[#d4943c]" : "text-neutral-600"} />
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={drumsVolume}
+                        onChange={(e) => setDrumsVolume(Number(e.target.value))}
+                        className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize md:h-1.5"
+                        disabled={!drumsOn}
+                        title="Hauptlautstärke Drums"
+                      />
+                      <span className="text-[10px] font-mono font-extrabold text-[#d4943c] w-6 text-right">
+                        {Math.round(drumsVolume * 100)}%
+                      </span>
+                    </div>
+
+                    {/* Desktop Pitch tuning slider */}
+                    <div className="flex items-center gap-2 bg-[#120a04]/40 px-2.5 py-1 rounded-xl border border-[#4a3828]/15 w-full hover:border-[#d4943c]/35 transition-colors">
+                      <span className="text-[9px] font-mono font-bold text-[#7a6a58] shrink-0 uppercase">Pitch:</span>
+                      <input
+                        type="range"
+                        min="0.5"
+                        max="2.0"
+                        step="0.05"
+                        value={drumsPitch}
+                        onChange={(e) => setDrumsPitch(Number(e.target.value))}
+                        className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize opacity-65 hover:opacity-100 transition-opacity"
+                        disabled={!drumsOn}
+                        title="Drums-Stimmung / Pitch-Tuning"
+                      />
+                      <span className="text-[9px] font-mono font-extrabold text-[#d4943c] w-7 text-right">
+                        {drumsPitch.toFixed(1)}x
+                      </span>
+                    </div>
                   </div>
 
                   {/* iOS Style Segmented Control */}
@@ -3213,22 +4185,45 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Volume Slider Section */}
-                  <div className="flex items-center gap-2 bg-[#120a04]/40 px-2.5 py-1.5 rounded-xl border border-[#4a3828]/30 max-w-full md:max-w-[140px] grow">
-                    <Volume2 size={12} className={basslineOn ? "text-[#d4943c]" : "text-neutral-600"} />
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.05"
-                      value={bassVolume}
-                      onChange={(e) => setBassVolume(Number(e.target.value))}
-                      className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize"
-                      disabled={!basslineOn}
-                    />
-                    <span className="text-[10px] font-mono font-extrabold text-[#d4943c] w-6 text-right">
-                      {Math.round(bassVolume * 100)}%
-                    </span>
+                  {/* Volume Slider Section & Extra Desktop Sliders */}
+                  <div className="flex flex-col gap-1.5 grow max-w-full md:max-w-[280px]">
+                    {/* Primary volume slider */}
+                    <div className="flex items-center gap-2 bg-[#120a04]/40 px-2.5 py-1.5 rounded-xl border border-[#4a3828]/30 w-full hover:border-[#d4943c]/35 transition-colors">
+                      <Volume2 size={12} className={basslineOn ? "text-[#d4943c]" : "text-neutral-600"} />
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={bassVolume}
+                        onChange={(e) => setBassVolume(Number(e.target.value))}
+                        className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize md:h-1.5"
+                        disabled={!basslineOn}
+                        title="Hauptlautstärke Bass"
+                      />
+                      <span className="text-[10px] font-mono font-extrabold text-[#d4943c] w-6 text-right">
+                        {Math.round(bassVolume * 100)}%
+                      </span>
+                    </div>
+
+                    {/* Desktop Cutoff filter sweep slider */}
+                    <div className="flex items-center gap-2 bg-[#120a04]/40 px-2.5 py-1 rounded-xl border border-[#4a3828]/15 w-full hover:border-[#d4943c]/35 transition-colors">
+                      <span className="text-[9px] font-mono font-bold text-[#7a6a58] shrink-0 uppercase">Filter:</span>
+                      <input
+                        type="range"
+                        min="100"
+                        max="1200"
+                        step="10"
+                        value={bassFilterCutoff}
+                        onChange={(e) => setBassFilterCutoff(Number(e.target.value))}
+                        className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize opacity-65 hover:opacity-100 transition-opacity"
+                        disabled={!basslineOn}
+                        title="Bass Tiefpass Filter-Cutoff Frequenz"
+                      />
+                      <span className="text-[9px] font-mono font-extrabold text-[#d4943c] w-9 text-right truncate">
+                        {bassFilterCutoff}Hz
+                      </span>
+                    </div>
                   </div>
 
                   {/* iOS Style Segmented Control */}
@@ -3254,6 +4249,109 @@ export default function App() {
                             <span className="text-xs">{opt.icon}</span>
                             <span>{opt.label}</span>
                           </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Channel Strip 3: DSP Pedalboard Rack (Stomp Switches for Mobile) */}
+                <div className="bg-[#1f130a] border border-[#4a3828]/50 p-3 rounded-2xl flex flex-col justify-between gap-2.5 shadow-inner md:col-span-2 xl:col-span-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-[#c8b8a4] flex items-center gap-1.5">
+                      <Sliders size={13} className="text-[#d4943c] animate-pulse" /> DSP-Quickboard
+                    </span>
+                    <span className="text-[9px] font-mono text-[#7a6a58] font-bold tracking-widest leading-none">
+                      STATUS: {
+                        pedalboard.overdrive.active || pedalboard.chorus.active || pedalboard.delay.active || pedalboard.reverb.active
+                          ? "FX-ACTIVE"
+                          : "FX-BYPASS"
+                      }
+                    </span>
+                  </div>
+
+                  {/* 4 neon status stomp buttons */}
+                  <div className="grid grid-cols-4 gap-1.5 my-0.5">
+                    {[
+                      { 
+                        id: "overdrive", 
+                        label: "Drive", 
+                        glowColor: "bg-amber-500 shadow-[0_0_8px_#f59e0b]",
+                        active: pedalboard.overdrive.active,
+                        toggle: () => setPedalboard(prev => ({ ...prev, overdrive: { ...prev.overdrive, active: !prev.overdrive.active } }))
+                      },
+                      { 
+                        id: "chorus", 
+                        label: "Chorus", 
+                        glowColor: "bg-blue-400 shadow-[0_0_8px_#3b82f6]",
+                        active: pedalboard.chorus.active,
+                        toggle: () => setPedalboard(prev => ({ ...prev, chorus: { ...prev.chorus, active: !prev.chorus.active } }))
+                      },
+                      { 
+                        id: "delay", 
+                        label: "Delay", 
+                        glowColor: "bg-emerald-400 shadow-[0_0_8px_#10b981]",
+                        active: pedalboard.delay.active,
+                        toggle: () => setPedalboard(prev => ({ ...prev, delay: { ...prev.delay, active: !prev.delay.active } }))
+                      },
+                      { 
+                        id: "reverb", 
+                        label: "Reverb", 
+                        glowColor: "bg-purple-400 shadow-[0_0_8px_#a855f7]",
+                        active: pedalboard.reverb.active,
+                        toggle: () => setPedalboard(prev => ({ ...prev, reverb: { ...prev.reverb, active: !prev.reverb.active } }))
+                      }
+                    ].map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          initAudio();
+                          p.toggle();
+                        }}
+                        className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-[9px] font-bold transition-all cursor-pointer border ${
+                          p.active 
+                            ? "bg-[#120a04] border-[#d4943c] text-white font-extrabold"
+                            : "bg-[#120a04]/40 border-[#4a3828]/45 text-[#7a6a58] hover:text-[#c8b8a4]"
+                        }`}
+                      >
+                        <div className={`w-2.5 h-2.5 rounded-full mb-1 transition-all ${p.active ? p.glowColor : "bg-neutral-800"}`} />
+                        <span className="text-[8px] font-mono uppercase tracking-tighter">{p.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Rig selection inside channel strip */}
+                  <div className="flex bg-[#120a04] p-0.5 rounded-xl border border-[#4a3828]/40 select-none overflow-x-auto scrollbar-none relative gap-0.5 items-center">
+                    <span className="text-[8px] font-mono text-[#5f4e3c] px-1.5 font-bold uppercase shrink-0">Rig:</span>
+                    {FX_PRESETS.reduce<any[]>((acc, cur) => {
+                      // Avoid too many items in this tiny footer bar, let's keep it clean
+                      if (cur.id !== "heavy_lead") {
+                        acc.push(cur);
+                      }
+                      return acc;
+                    }, []).map((p: any) => {
+                      const isCurrent = (
+                        pedalboard.overdrive.active === p.settings.overdrive.active &&
+                        pedalboard.chorus.active === p.settings.chorus.active &&
+                        pedalboard.delay.active === p.settings.delay.active &&
+                        pedalboard.reverb.active === p.settings.reverb.active
+                      );
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => applyFxPreset(p.id)}
+                          className={`relative px-1.5 py-1 rounded-lg text-[9px] font-mono font-bold transition-all cursor-pointer whitespace-nowrap z-10 shrink-0 ${
+                            isCurrent ? "text-[#1a1008] font-extrabold" : "text-[#7a6a58] hover:text-[#c8b8a4]"
+                          }`}
+                        >
+                          {isCurrent && (
+                            <motion.div
+                              layoutId="activeFxPillFooter"
+                              className="absolute inset-0 bg-[#d4943c] rounded-lg -z-10 shadow-[0_1px_5px_rgba(212,148,60,0.35)]"
+                              transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                            />
+                          )}
+                          <span>{p.icon} {p.name.replace("Dry ", "").replace("Surf ", "")}</span>
                         </button>
                       );
                     })}
@@ -3409,19 +4507,41 @@ export default function App() {
               </div>
 
               {/* Row 5: Parts Share, Labels Adder */}
-              <div className="flex flex-wrap items-center gap-2 mt-2">
-                <span className="text-xs font-mono text-[#7a6a58] font-bold">Akkord-Teil:</span>
-                {["Intro", "Verse", "Refrain", "Chorus", "Bridge", "Outro"].map((lbl) => (
-                  <button
-                    key={lbl}
-                    onClick={() => addLabelToTimeline(lbl)}
-                    className="text-[10px] bg-[#1a1008] border border-[#4a3828] text-[#c8b8a4] hover:border-[#4a9e5c] px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold"
-                  >
-                    + {lbl}
-                  </button>
-                ))}
+              <div className="flex flex-wrap items-center gap-3 mt-2.5 pt-2 border-t border-[#4a3828]/25">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs font-mono text-[#7a6a58] font-bold">Akkord-Teil:</span>
+                  {["Intro", "Verse", "Refrain", "Chorus", "Bridge", "Outro"].map((lbl) => (
+                    <button
+                      key={lbl}
+                      onClick={() => addLabelToTimeline(lbl)}
+                      className="text-[10px] bg-[#1a1008] border border-[#4a3828] text-[#c8b8a4] hover:border-[#4a9e5c] px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold"
+                    >
+                      + {lbl}
+                    </button>
+                  ))}
+                </div>
 
-                <div className="ml-auto flex items-center gap-2">
+                {/* Song configuration name */}
+                <div className="flex items-center gap-2 bg-[#120a04]/80 px-2.5 py-1.5 rounded-xl border border-[#4a3828]/50 shadow-inner max-w-full">
+                  <span className="text-[10px] font-mono text-[#7a6a58] shrink-0 font-extrabold uppercase">Titel:</span>
+                  <input
+                    type="text"
+                    value={whatsAppSongTitle}
+                    onChange={(e) => setWhatsAppSongTitle(e.target.value)}
+                    placeholder="Mein Jam-Song"
+                    className="bg-transparent border-0 text-xs text-[#d4943c] font-black p-0 focus:outline-none focus:ring-0 w-24 sm:w-28 placeholder-[#7a6a58]/50"
+                    title="Benenne deinen Song vor dem WhatsApp-Teilen"
+                  />
+                </div>
+
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setWhatsAppImportModalOpen(true)}
+                    title="Importiere einen per WhatsApp erhaltenen Song deines Kumpels"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-[#4a9e5c]/25 border border-[#4a9e5c] text-[#6fc888] hover:bg-[#4a9e5c]/40 font-mono text-[10px]"
+                  >
+                    📥 WhatsApp-Import
+                  </button>
                   <button
                     onClick={copyProgression}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-[#1a1008] border border-[#4a3828] text-[#c8b8a4] hover:text-[#d4943c] hover:border-[#d4943c]"
@@ -3432,7 +4552,7 @@ export default function App() {
                     onClick={shareWhatsApp}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-[#25D366]/20 border border-[#25D366] text-[#25D366] hover:bg-[#25D366]/35"
                   >
-                    <Share2 size={12} /> WhatsApp
+                    <Share2 size={12} /> WhatsApp Senden
                   </button>
                 </div>
               </div>
@@ -3440,6 +4560,79 @@ export default function App() {
           )}
         </div>
       </footer>
+
+      {/* WhatsApp Import Modal */}
+      <AnimatePresence>
+        {whatsAppImportModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => {
+              setWhatsAppImportModalOpen(false);
+              setWhatsAppImportText("");
+            }}
+            className="fixed inset-0 bg-black/85 z-55 flex items-center justify-center p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#2a1e10] border-2 border-[#4a3828] p-6 rounded-2xl max-w-lg w-full text-sm leading-relaxed shadow-[0_25px_60px_rgba(0,0,0,0.9)]"
+            >
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#4a3828]/40">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">📩</span>
+                  <h2 className="text-lg font-serif text-[#d4943c] font-black">
+                    Akkorde aus WhatsApp laden
+                  </h2>
+                </div>
+                <button
+                  onClick={() => {
+                    setWhatsAppImportModalOpen(false);
+                    setWhatsAppImportText("");
+                  }}
+                  className="p-1 text-[#7a6a58] hover:text-[#f0e0cc] transition-colors border-none bg-transparent cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-xs text-[#a89880] leading-normal font-medium">
+                  Kopiere die <strong>gesamte Nachricht</strong>, die du von deinem Freund auf WhatsApp erhalten hast, und füge sie unten in das Textfeld ein. Die App extrahiert automatisch alle Akkorde, Tempo, Rhythmus und Instrument-Setups!
+                </p>
+
+                <textarea
+                  value={whatsAppImportText}
+                  onChange={(e) => setWhatsAppImportText(e.target.value)}
+                  placeholder="Füge die WhatsApp-Nachricht deines Freundes hier ein (inklusive des Codes ganz unten)..."
+                  className="w-full h-40 bg-[#120a04] border border-[#4a3828] text-[#f0e0cc] text-xs font-mono p-3 rounded-xl focus:outline-none focus:border-[#d4943c] placeholder-[#7a6a58]/55"
+                />
+
+                <div className="flex gap-2 justify-end pt-2">
+                  <button
+                    onClick={() => {
+                      setWhatsAppImportText("");
+                      setWhatsAppImportModalOpen(false);
+                    }}
+                    className="px-4 py-2 text-xs font-bold rounded-lg border border-[#4a3828] text-[#7a6a58] hover:text-[#f0e0cc] transition-all bg-transparent cursor-pointer"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    onClick={() => importFromWhatsApp(whatsAppImportText)}
+                    className="px-5 py-2 text-xs font-black uppercase rounded-lg bg-[#4a9e5c] hover:bg-green-600 text-white shadow-[0_4px_12px_rgba(74,158,92,0.35)] transition-all flex items-center gap-1.5 border-none cursor-pointer"
+                  >
+                    🚀 Laden & Einspielen
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Guide Help Modal */}
       <AnimatePresence>
