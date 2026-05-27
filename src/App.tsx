@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   HelpCircle,
   Guitar,
@@ -45,13 +45,16 @@ function noteNameAny(semi: number, key: number = 0): string {
 
 // Timeline item interface
 interface TimelineItem {
-  type: "chord" | "label";
+  type: "chord" | "label" | "recording";
   name: string;
   semitone?: number;
   quality?: "maj" | "min" | "dim";
   suffix?: string;
   roman?: string;
   id: number;
+  audioBuffer?: AudioBuffer | null;
+  audioUrl?: string;
+  duration?: number;
 }
 
 // Theoretical progressions DB
@@ -385,8 +388,61 @@ const STRUM_OPTIONS = [
   { id: "strum", label: "Zupfen", icon: "🪕" }
 ];
 
+interface KnobProps {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (val: number) => void;
+  suffix?: string;
+}
+
+const Knob: React.FC<KnobProps> = ({ label, value, min, max, onChange, suffix = "" }) => {
+  const percentage = (value - min) / (max - min);
+  const angle = -135 + percentage * 270;
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const step = (max - min) / 40;
+    const delta = e.deltaY > 0 ? -step : step;
+    const newVal = Math.min(max, Math.max(min, value + delta));
+    onChange(Number(newVal.toFixed(2)));
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-1 select-none cursor-ns-resize" onWheel={handleWheel}>
+      <span className="text-[9px] font-mono tracking-wider font-extrabold uppercase text-[#a89880] truncate w-12 text-center" title={label}>{label}</span>
+      <div className="relative w-10 h-10 flex items-center justify-center rounded-full bg-[#120a04] border border-[#5a4838] shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]">
+        {/* Needle pointer */}
+        <div 
+          className="absolute w-0.5 h-4 bg-[#d4943c] rounded-full origin-bottom"
+          style={{
+            transform: `rotate(${angle}deg) translateY(-6px)`,
+            transition: "transform 0.1s ease-out"
+          }}
+        />
+        {/* Small cap center */}
+        <div className="w-3 h-3 rounded-full bg-[#2a1e10] border border-[#d4943c]/40 shadow-xs" />
+      </div>
+      {/* Fallback micro range slider */}
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={(max - min) / 30}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-12 h-1 bg-[#120a04] mt-0.5 accent-[#d4943c] cursor-ew-resize rounded-full"
+      />
+      <span className="text-[8px] font-mono font-bold text-[#d4943c]">
+        {Math.round(percentage * 100)}{suffix}
+      </span>
+    </div>
+  );
+};
+
 export default function App() {
-  const [tab, setTab] = useState<"songwriter" | "theorie" | "tuner">("songwriter");
+  const [tab, setTab] = useState<"songwriter" | "theorie" | "tuner" | "pedalboard" | "recorder">("songwriter");
   const [selKeyIdx, setSelKeyIdx] = useState<number>(0);
   const [capo, setCapo] = useState<number>(0);
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
@@ -400,10 +456,94 @@ export default function App() {
   const [strumPattern, setStrumPattern] = useState<"block" | "arpeggio" | "strum">("block");
   const [drumPattern, setDrumPattern] = useState<string>("standard");
   const [bassPattern, setBassPattern] = useState<string>("root");
+  const [drumsVolume, setDrumsVolume] = useState<number>(0.65);
+  const [bassVolume, setBassVolume] = useState<number>(0.65);
   const [theoryKey, setTheoryKey] = useState<number>(0);
   const [infoModalOpen, setInfoModalOpen] = useState<boolean>(false);
   const [toastMsg, setToastMsg] = useState<string>("");
   const [isFooterMinimized, setIsFooterMinimized] = useState<boolean>(false);
+  const [expandedSection, setExpandedSection] = useState<"navigation" | "sequencer" | "instruments" | "style" | "trash" | null>("navigation");
+
+  // Guitar Pedalboard FX State
+  const [pedalboard, setPedalboard] = useState({
+    overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+    chorus: { active: false, rate: 1.5, depth: 0.35, mix: 0.4 },
+    delay: { active: false, time: 0.38, feedback: 0.45, mix: 0.4 },
+    reverb: { active: false, decay: 2.2, mix: 0.35 }
+  });
+
+  // Sound Recorder State for Timeline Recording Addon
+  const [recordings, setRecordings] = useState<Array<{ id: number; name: string; url: string; buffer: AudioBuffer | null; duration: number }>>([]);
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [recordingSeconds, setRecordingSeconds] = useState<number>(0);
+  const recordingTimerRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+
+  // iOS Style Log-Press Context Menu States
+  const [longPressActive, setLongPressActive] = useState<boolean>(false);
+  const [longPressTimer, setLongPressTimer] = useState<any>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    x: number;
+    y: number;
+    chordData: {
+      name: string;
+      semitone: number;
+      quality: "maj" | "min" | "dim";
+      suffix: string;
+      roman: string;
+    };
+  } | null>(null);
+
+  const startLongPress = (
+    e: React.PointerEvent<HTMLButtonElement>,
+    chordData: { name: string; semitone: number; quality: "maj" | "min" | "dim"; suffix?: string; roman?: string }
+  ) => {
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+    setLongPressActive(false);
+
+    const timer = setTimeout(() => {
+      setLongPressActive(true);
+      if (navigator.vibrate) {
+        navigator.vibrate(28);
+      }
+      setContextMenu({
+        isOpen: true,
+        x: clientX || e.currentTarget.getBoundingClientRect().left + 24,
+        y: clientY || e.currentTarget.getBoundingClientRect().top - 12,
+        chordData: {
+          name: chordData.name,
+          semitone: chordData.semitone,
+          quality: chordData.quality,
+          suffix: chordData.suffix || (chordData.quality === "min" ? "m" : chordData.quality === "dim" ? "dim" : ""),
+          roman: chordData.roman || ""
+        }
+      });
+    }, 450);
+    setLongPressTimer(timer);
+  };
+
+  const endLongPress = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const handleChordClick = (
+    e: React.MouseEvent,
+    defaultAction: () => void
+  ) => {
+    if (longPressActive) {
+      e.preventDefault();
+      e.stopPropagation();
+      setLongPressActive(false);
+      return;
+    }
+    defaultAction();
+  };
 
   // Audio nodes and context refs
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -412,6 +552,26 @@ export default function App() {
   const playTimeoutRef = useRef<number | null>(null);
   const timelineRef = useRef<TimelineItem[]>([]);
   const uidRef = useRef<number>(0);
+
+  // Pedalboard Web Audio refs
+  const driveNodeRef = useRef<WaveShaperNode | null>(null);
+  const driveToneNodeRef = useRef<BiquadFilterNode | null>(null);
+  const driveGainNodeRef = useRef<GainNode | null>(null);
+  
+  const chorusDelayNodeRef = useRef<DelayNode | null>(null);
+  const chorusLfoRef = useRef<OscillatorNode | null>(null);
+  const chorusLfoGainRef = useRef<GainNode | null>(null);
+  const chorusDryGainRef = useRef<GainNode | null>(null);
+  const chorusWetGainRef = useRef<GainNode | null>(null);
+
+  const delayNodeRef = useRef<DelayNode | null>(null);
+  const delayFeedbackRef = useRef<GainNode | null>(null);
+  const delayDryRef = useRef<GainNode | null>(null);
+  const delayWetRef = useRef<GainNode | null>(null);
+
+  const reverbNodeRef = useRef<ConvolverNode | null>(null);
+  const reverbDryRef = useRef<GainNode | null>(null);
+  const reverbWetRef = useRef<GainNode | null>(null);
 
   // Tuner state
   const [isTunerRunning, setIsTunerRunning] = useState<boolean>(false);
@@ -430,18 +590,243 @@ export default function App() {
     timelineRef.current = timeline;
   }, [timeline]);
 
-  // Clean playTimeout on unmount
+  // Clean playTimeout and recording intervals on unmount
   useEffect(() => {
     return () => {
       if (playTimeoutRef.current) clearTimeout(playTimeoutRef.current);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       stopTuner();
+      // stop recording stream if any
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
     };
   }, []);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(""), 2000);
+    setTimeout(() => setToastMsg(""), 2200);
   };
+
+  const makeDistortionCurve = (amount: number) => {
+    const k = typeof amount === "number" ? amount : 50;
+    const n_samples = 44100;
+    const curve = new Float32Array(n_samples);
+    const deg = Math.PI / 180;
+    for (let i = 0; i < n_samples; ++i) {
+      const x = (i * 2) / n_samples - 1;
+      curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+    }
+    return curve;
+  };
+
+  const createReverbImpulse = (ctx: AudioContext, decay: number): AudioBuffer => {
+    const sampleRate = ctx.sampleRate;
+    const length = Math.max(sampleRate * 0.1, Math.round(sampleRate * decay));
+    const impulse = ctx.createBuffer(2, length, sampleRate);
+    const left = impulse.getChannelData(0);
+    const right = impulse.getChannelData(1);
+    for (let i = 0; i < length; i++) {
+      const percent = i / length;
+      const decayEnvelope = Math.pow(1 - percent, 2);
+      const valL = (Math.random() * 2 - 1) * decayEnvelope;
+      const valR = (Math.random() * 2 - 1) * decayEnvelope;
+      left[i] = valL;
+      right[i] = valR;
+    }
+    return impulse;
+  };
+
+  const setupEffectsChain = (ctx: AudioContext, masterGain: GainNode) => {
+    // 1. Overdrive Nodes
+    const shaper = ctx.createWaveShaper();
+    const ovFilter = ctx.createBiquadFilter();
+    ovFilter.type = "lowpass";
+    const ovGain = ctx.createGain();
+
+    // 2. Chorus Nodes
+    const choDry = ctx.createGain();
+    const choWet = ctx.createGain();
+    const choDelay = ctx.createDelay();
+    choDelay.delayTime.value = 0.03; // baseline delay 30ms
+    const choLfo = ctx.createOscillator();
+    choLfo.type = "sine";
+    const choLfoGain = ctx.createGain();
+
+    // 3. Delay Nodes
+    const delDry = ctx.createGain();
+    const delWet = ctx.createGain();
+    const delNode = ctx.createDelay(2.0);
+    const delFeedback = ctx.createGain();
+
+    // 4. Reverb Nodes
+    const revDry = ctx.createGain();
+    const revWet = ctx.createGain();
+    const revCon = ctx.createConvolver();
+
+    // CONNECT INTEGRATION
+    masterGain.disconnect();
+    
+    // Connect MasterGain to Overdrive Input
+    masterGain.connect(shaper);
+    shaper.connect(ovFilter);
+    ovFilter.connect(ovGain);
+
+    // Overdrive Output to Chorus (Both dry and wet paths)
+    ovGain.connect(choDry);
+    ovGain.connect(choDelay);
+    choDelay.connect(choWet);
+
+    // Chorus LFO setup
+    choLfo.connect(choLfoGain);
+    choLfoGain.connect(choDelay.delayTime);
+    choLfo.start();
+
+    // Chorus Summer Gain
+    const choOutput = ctx.createGain();
+    choDry.connect(choOutput);
+    choWet.connect(choOutput);
+
+    // Chorus Out to Delay (Both dry and wet paths)
+    choOutput.connect(delDry);
+    choOutput.connect(delNode);
+    delNode.connect(delWet);
+
+    // Delay Feedback Loop
+    delNode.connect(delFeedback);
+    delFeedback.connect(delNode);
+
+    // Delay Summer Gain
+    const delOutput = ctx.createGain();
+    delDry.connect(delOutput);
+    delWet.connect(delOutput);
+
+    // Delay Out to Reverb (Both dry and wet paths)
+    delOutput.connect(revDry);
+    delOutput.connect(revCon);
+    revCon.connect(revWet);
+
+    // Reverb Out to Destination
+    const finalOut = ctx.createGain();
+    revDry.connect(finalOut);
+    revWet.connect(finalOut);
+    finalOut.connect(ctx.destination);
+
+    // Store refs
+    driveNodeRef.current = shaper;
+    driveToneNodeRef.current = ovFilter;
+    driveGainNodeRef.current = ovGain;
+
+    chorusDelayNodeRef.current = choDelay;
+    chorusLfoRef.current = choLfo;
+    chorusLfoGainRef.current = choLfoGain;
+    chorusDryGainRef.current = choDry;
+    chorusWetGainRef.current = choWet;
+
+    delayNodeRef.current = delNode;
+    delayFeedbackRef.current = delFeedback;
+    delayDryRef.current = delDry;
+    delayWetRef.current = delWet;
+
+    reverbNodeRef.current = revCon;
+    reverbDryRef.current = revDry;
+    reverbWetRef.current = revWet;
+
+    // Reactively update parameters
+    updatePedalboardNodesDirect(ctx);
+  };
+
+  const updatePedalboardNodesDirect = (ctx: AudioContext) => {
+    // 1. Overdrive
+    const shaper = driveNodeRef.current;
+    const filter = driveToneNodeRef.current;
+    const gainNode = driveGainNodeRef.current;
+    if (shaper && filter && gainNode) {
+      if (pedalboard.overdrive.active) {
+        shaper.curve = makeDistortionCurve(pedalboard.overdrive.drive * 120);
+        filter.frequency.setValueAtTime(300 + pedalboard.overdrive.tone * 5700, ctx.currentTime);
+        gainNode.gain.setValueAtTime(pedalboard.overdrive.volume, ctx.currentTime);
+      } else {
+        shaper.curve = null;
+        filter.frequency.setValueAtTime(22000, ctx.currentTime);
+        gainNode.gain.setValueAtTime(1.0, ctx.currentTime);
+      }
+    }
+
+    // 2. Chorus
+    const choDry = chorusDryGainRef.current;
+    const choWet = chorusWetGainRef.current;
+    const lfo = chorusLfoRef.current;
+    const lfoGain = chorusLfoGainRef.current;
+    if (choDry && choWet && lfoGain) {
+      if (pedalboard.chorus.active) {
+        choDry.gain.setValueAtTime(1.0 - pedalboard.chorus.mix * 0.5, ctx.currentTime);
+        choWet.gain.setValueAtTime(pedalboard.chorus.mix * 0.9, ctx.currentTime);
+        lfoGain.gain.setValueAtTime(0.001 + pedalboard.chorus.depth * 0.0035, ctx.currentTime);
+        if (lfo) {
+          lfo.frequency.setValueAtTime(0.2 + pedalboard.chorus.rate * 9.8, ctx.currentTime);
+        }
+      } else {
+        choDry.gain.setValueAtTime(1.0, ctx.currentTime);
+        choWet.gain.setValueAtTime(0.0, ctx.currentTime);
+      }
+    }
+
+    // 3. Delay
+    const delNode = delayNodeRef.current;
+    const delFb = delayFeedbackRef.current;
+    const delDry = delayDryRef.current;
+    const delWet = delayWetRef.current;
+    if (delNode && delFb && delDry && delWet) {
+      if (pedalboard.delay.active) {
+        delDry.gain.setValueAtTime(1.0, ctx.currentTime);
+        delWet.gain.setValueAtTime(pedalboard.delay.mix * 0.85, ctx.currentTime);
+        delNode.delayTime.setValueAtTime(0.05 + pedalboard.delay.time * 0.95, ctx.currentTime);
+        delFb.gain.setValueAtTime(pedalboard.delay.feedback * 0.75, ctx.currentTime);
+      } else {
+        delDry.gain.setValueAtTime(1.0, ctx.currentTime);
+        delWet.gain.setValueAtTime(0.0, ctx.currentTime);
+      }
+    }
+
+    // 4. Reverb
+    const revCon = reverbNodeRef.current;
+    const revDry = reverbDryRef.current;
+    const revWet = reverbWetRef.current;
+    if (revCon && revDry && revWet) {
+      if (pedalboard.reverb.active) {
+        revDry.gain.setValueAtTime(1.0, ctx.currentTime);
+        revWet.gain.setValueAtTime(pedalboard.reverb.mix * 0.85, ctx.currentTime);
+        if (!revCon.buffer) {
+          revCon.buffer = createReverbImpulse(ctx, pedalboard.reverb.decay);
+        }
+      } else {
+        revDry.gain.setValueAtTime(1.0, ctx.currentTime);
+        revWet.gain.setValueAtTime(0.0, ctx.currentTime);
+      }
+    }
+  };
+
+  const updatePedalboardNodes = () => {
+    const ctx = audioContextRef.current;
+    if (ctx) {
+      updatePedalboardNodesDirect(ctx);
+    }
+  };
+
+  // Re-generate reverb buffer if decay changes
+  useEffect(() => {
+    const ctx = audioContextRef.current;
+    const revCon = reverbNodeRef.current;
+    if (ctx && revCon && pedalboard.reverb.active) {
+      try {
+        revCon.buffer = createReverbImpulse(ctx, pedalboard.reverb.decay);
+      } catch (e) {
+        console.warn("Could not hot-swap Reverb buffer", e);
+      }
+    }
+    updatePedalboardNodes();
+  }, [pedalboard]);
 
   const initAudio = () => {
     if (!audioContextRef.current) {
@@ -449,9 +834,9 @@ export default function App() {
       const ctx = new AudioCtx();
       const gainNode = ctx.createGain();
       gainNode.gain.value = 0.8;
-      gainNode.connect(ctx.destination);
       audioContextRef.current = ctx;
       masterGainRef.current = gainNode;
+      setupEffectsChain(ctx, gainNode);
     }
     if (audioContextRef.current.state === "suspended") {
       audioContextRef.current.resume();
@@ -680,6 +1065,7 @@ export default function App() {
   };
 
   const playKick = (time: number) => {
+    if (drumsVolume <= 0) return;
     const ctx = audioContextRef.current;
     const masterGain = masterGainRef.current;
     if (!ctx || !masterGain) return;
@@ -687,8 +1073,8 @@ export default function App() {
     const g = ctx.createGain();
     osc.frequency.setValueAtTime(150, time);
     osc.frequency.exponentialRampToValueAtTime(50, time + 0.08);
-    g.gain.setValueAtTime(0.55, time);
-    g.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+    g.gain.setValueAtTime(0.55 * drumsVolume, time);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + 0.3);
     osc.connect(g);
     g.connect(masterGain);
     osc.start(time);
@@ -696,6 +1082,7 @@ export default function App() {
   };
 
   const playSnare = (time: number) => {
+    if (drumsVolume <= 0) return;
     const ctx = audioContextRef.current;
     const masterGain = masterGainRef.current;
     if (!ctx || !masterGain) return;
@@ -705,8 +1092,8 @@ export default function App() {
     const nf = ctx.createBiquadFilter();
     nf.type = "highpass";
     nf.frequency.value = 1200;
-    ng.gain.setValueAtTime(0.28, time);
-    ng.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
+    ng.gain.setValueAtTime(0.28 * drumsVolume, time);
+    ng.gain.exponentialRampToValueAtTime(0.0001, time + 0.18);
     ns.connect(nf);
     nf.connect(ng);
     ng.connect(masterGain);
@@ -716,8 +1103,8 @@ export default function App() {
     const o = ctx.createOscillator();
     const g = ctx.createGain();
     o.frequency.value = 180;
-    g.gain.setValueAtTime(0.2, time);
-    g.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+    g.gain.setValueAtTime(0.2 * drumsVolume, time);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + 0.08);
     o.connect(g);
     g.connect(masterGain);
     o.start(time);
@@ -725,6 +1112,7 @@ export default function App() {
   };
 
   const playHihat = (time: number, open = false) => {
+    if (drumsVolume <= 0) return;
     const ctx = audioContextRef.current;
     const masterGain = masterGainRef.current;
     if (!ctx || !masterGain) return;
@@ -735,8 +1123,8 @@ export default function App() {
     f.type = "highpass";
     f.frequency.value = 7000;
     const d = open ? 0.12 : 0.06;
-    g.gain.setValueAtTime(open ? 0.1 : 0.07, time);
-    g.gain.exponentialRampToValueAtTime(0.001, time + d);
+    g.gain.setValueAtTime((open ? 0.1 : 0.07) * drumsVolume, time);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + d);
     ns.connect(f);
     f.connect(g);
     g.connect(masterGain);
@@ -756,7 +1144,7 @@ export default function App() {
     f.frequency.value = 1500;
     f.Q.value = 1;
     g.gain.setValueAtTime(0.04, time);
-    g.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + 0.04);
     ns.connect(f);
     f.connect(g);
     g.connect(masterGain);
@@ -765,6 +1153,7 @@ export default function App() {
   };
 
   const playBassNote = (semi: number, time: number, dur: number) => {
+    if (bassVolume <= 0) return;
     const ctx = audioContextRef.current;
     const masterGain = masterGainRef.current;
     if (!ctx || !masterGain) return;
@@ -777,8 +1166,8 @@ export default function App() {
     fl.type = "lowpass";
     fl.frequency.value = 350;
     g.gain.setValueAtTime(0, time);
-    g.gain.linearRampToValueAtTime(0.12, time + 0.01);
-    g.gain.setValueAtTime(0.12, time + dur - 0.05);
+    g.gain.linearRampToValueAtTime(0.12 * bassVolume, time + 0.01);
+    g.gain.setValueAtTime(0.12 * bassVolume, time + dur - 0.05);
     g.gain.linearRampToValueAtTime(0, time + dur);
     o.connect(fl);
     fl.connect(g);
@@ -791,8 +1180,8 @@ export default function App() {
     o2.type = "sine";
     o2.frequency.value = f;
     g2.gain.setValueAtTime(0, time);
-    g2.gain.linearRampToValueAtTime(0.08, time + 0.01);
-    g2.gain.setValueAtTime(0.08, time + dur - 0.05);
+    g2.gain.linearRampToValueAtTime(0.08 * bassVolume, time + 0.01);
+    g2.gain.setValueAtTime(0.08 * bassVolume, time + dur - 0.05);
     g2.gain.linearRampToValueAtTime(0, time + dur);
     o2.connect(g2);
     g2.connect(masterGain);
@@ -943,6 +1332,107 @@ export default function App() {
     setTimeline((prev) => [...prev, newItem]);
   };
 
+  // Recording Helper Functions
+  const startRecording = async () => {
+    initAudio();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordedChunksRef.current = [];
+      
+      let options = {};
+      // target common, accessible browser codecs
+      if (MediaRecorder.isTypeSupported("audio/webm")) {
+        options = { mimeType: "audio/webm" };
+      } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
+        options = { mimeType: "audio/ogg" };
+      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+        options = { mimeType: "audio/mp4" };
+      }
+
+      const recorder = new MediaRecorder(stream, options);
+      
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          recordedChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const blob = new Blob(recordedChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        const url = URL.createObjectURL(blob);
+        
+        const arrayBuf = await blob.arrayBuffer();
+        const ctx = audioContextRef.current;
+        let decodedBuffer: AudioBuffer | null = null;
+        if (ctx) {
+          try {
+            decodedBuffer = await ctx.decodeAudioData(arrayBuf);
+          } catch (err) {
+            console.error("decodeAudioData failed", err);
+          }
+        }
+
+        const id = uidRef.current++;
+        const recIndex = recordings.length + 1;
+        const newRec = {
+          id,
+          name: `Aufnahme #${recIndex} (${decodedBuffer ? decodedBuffer.duration.toFixed(1) : "2.0"}s)`,
+          url,
+          buffer: decodedBuffer,
+          duration: decodedBuffer ? decodedBuffer.duration : 2.0
+        };
+
+        setRecordings((prev) => [...prev, newRec]);
+        showToast(`Aufnahme #${recIndex} im Kasten!`);
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+      setRecordingSeconds(0);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
+
+    } catch (err) {
+      console.error("Could not capture audio stream", err);
+      showToast("Aufnahme fehlgeschlagen. Überprüfe die Mikrofon-Freigabe.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    
+    const recorder = mediaRecorderRef.current;
+    if (recorder && isRecording) {
+      recorder.stop();
+      recorder.stream.getTracks().forEach((track) => track.stop());
+      setIsRecording(false);
+    }
+  };
+
+  const addRecordingToTimeline = (rec: { name: string; buffer: AudioBuffer | null; url: string; duration: number }) => {
+    const newItem: TimelineItem = {
+      type: "recording",
+      name: rec.name,
+      id: uidRef.current++,
+      audioBuffer: rec.buffer,
+      audioUrl: rec.url,
+      duration: rec.duration
+    };
+    setTimeline((prev) => [...prev, newItem]);
+    showToast(`"${rec.name}" zur Timeline hinzugefügt!`);
+  };
+
+  const deleteRecording = (id: number) => {
+    setRecordings((prev) => prev.filter((r) => r.id !== id));
+    showToast("Aufnahme gelöscht");
+  };
+
   const removeTimelineItem = (id: number) => {
     setTimeline((prev) => prev.filter((item) => item.id !== id));
   };
@@ -1026,8 +1516,8 @@ export default function App() {
   // Playback Loop Engine
   const startPlay = () => {
     const currentTimeline = timelineRef.current;
-    if (!currentTimeline.filter((c) => c.type === "chord").length) {
-      showToast("Füge erst Akkorde zur Timeline hinzu");
+    if (!currentTimeline.length) {
+      showToast("Die Timeline ist leer. Füge Akkorde oder Aufnahmen hinzu.");
       return;
     }
     initAudio();
@@ -1062,6 +1552,29 @@ export default function App() {
       playTimeoutRef.current = setTimeout(() => {
         setPlayIdx((prev) => (prev + 1) >= currentTimeline.length ? 0 : prev + 1);
       }, 300) as any;
+      return;
+    }
+
+    if (item.type === "recording") {
+      if (item.audioBuffer) {
+        const ctx = audioContextRef.current;
+        const masterGain = masterGainRef.current;
+        if (ctx && masterGain) {
+          const source = ctx.createBufferSource();
+          source.buffer = item.audioBuffer;
+          source.connect(masterGain);
+          source.start(now);
+        }
+      } else if (item.audioUrl) {
+        const audio = new Audio(item.audioUrl);
+        audio.volume = 0.8;
+        audio.play().catch((e) => console.warn("Fallback playback failed:", e));
+      }
+
+      const recDur = Math.max(0.5, item.duration ?? barDur);
+      playTimeoutRef.current = setTimeout(() => {
+        setPlayIdx((prev) => (prev + 1) >= currentTimeline.length ? 0 : prev + 1);
+      }, recDur * 1000) as any;
       return;
     }
 
@@ -1331,9 +1844,12 @@ export default function App() {
     }, 1800);
   };
 
-  const changeTab = (newTab: "songwriter" | "theorie" | "tuner") => {
+  const changeTab = (newTab: "songwriter" | "theorie" | "tuner" | "pedalboard" | "recorder") => {
     if (newTab !== "tuner") {
       stopTuner();
+    }
+    if (newTab !== "recorder" && isRecording) {
+      stopRecording();
     }
     setTab(newTab);
   };
@@ -1375,7 +1891,7 @@ export default function App() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => setInfoModalOpen(true)}
+               onClick={() => setInfoModalOpen(true)}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#2a1e10] border border-[#4a3828] text-[#c8b8a4] hover:border-[#d4943c] hover:text-[#f0e0cc] transition-all cursor-pointer"
             >
               <HelpCircle size={14} /> Guide
@@ -1384,19 +1900,21 @@ export default function App() {
         </header>
 
         {/* Tab Selection */}
-        <div className="flex justify-center mb-10">
-          <div className="relative flex rounded-2xl bg-[#120a04]/90 p-1 border border-[#4a3828]/60 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-md select-none">
+        <div className="flex justify-center mb-10 overflow-x-auto w-full scrollbar-none py-1">
+          <div className="relative flex rounded-2xl bg-[#120a04]/90 p-1 border border-[#4a3828]/60 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-md select-none shrink-0 gap-1 md:gap-0">
             {[
               { id: "songwriter" as const, label: "Songwriter", icon: <Guitar size={15} /> },
               { id: "theorie" as const, label: "Theorie", icon: <BookOpen size={15} /> },
-              { id: "tuner" as const, label: "Stimmgerät", icon: <Mic size={15} /> }
+              { id: "tuner" as const, label: "Stimmgerät", icon: <Mic size={15} /> },
+              { id: "pedalboard" as const, label: "Pedalboard", icon: <SlidersHorizontal size={15} /> },
+              { id: "recorder" as const, label: "Aufnahme", icon: <Volume2 size={15} /> }
             ].map((item) => {
               const isActive = tab === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => changeTab(item.id)}
-                  className={`relative flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs sm:text-sm font-black tracking-wide uppercase transition-all duration-300 cursor-pointer z-10 ${
+                  className={`relative flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-xl text-xs sm:text-sm font-black tracking-wide uppercase transition-all duration-300 cursor-pointer z-10 ${
                     isActive
                       ? "text-[#1a1008]"
                       : "text-[#7a6a58] hover:text-[#c8b8a4]"
@@ -1410,7 +1928,7 @@ export default function App() {
                     />
                   )}
                   {item.icon}
-                  <span>{item.label}</span>
+                  <span className="hidden sm:inline">{item.label}</span>
                 </button>
               );
             })}
@@ -1463,11 +1981,16 @@ export default function App() {
                     return (
                       <button
                         key={`maj-${i}`}
-                        onClick={() => {
-                          setSelKeyIdx(i);
-                          addChordToTimeline(CO5_MAJ[i], semi, "maj");
+                        onPointerDown={(e) => startLongPress(e, { name: CO5_MAJ[i], semitone: semi, quality: "maj", suffix: "", roman: "I" })}
+                        onPointerUp={endLongPress}
+                        onPointerLeave={endLongPress}
+                        onClick={(e) => {
+                          handleChordClick(e, () => {
+                            setSelKeyIdx(i);
+                            addChordToTimeline(CO5_MAJ[i], semi, "maj");
+                          });
                         }}
-                        className={`absolute w-11 h-11 sm:w-12 sm:h-12 rounded-full border-2 flex items-center justify-center text-xs sm:text-sm font-bold transition-all transform cursor-pointer -translate-x-1/2 -translate-y-1/2 hover:scale-110 z-20 ${borderStyles}`}
+                        className={`absolute w-11 h-11 sm:w-12 sm:h-12 rounded-full border-2 flex items-center justify-center text-xs sm:text-sm font-bold transition-all transform cursor-pointer -translate-x-1/2 -translate-y-1/2 hover:scale-110 active:scale-95 z-20 ${borderStyles}`}
                         style={{
                           left: `calc(50% + ${x}px)`,
                           top: `calc(50% + ${y}px)`
@@ -1499,11 +2022,16 @@ export default function App() {
                     return (
                       <button
                         key={`min-${i}`}
-                        onClick={() => {
-                          setSelKeyIdx(i);
-                          addChordToTimeline(CO5_MIN[i], minS, "min");
+                        onPointerDown={(e) => startLongPress(e, { name: CO5_MIN[i], semitone: minS, quality: "min", suffix: "m", roman: "vi" })}
+                        onPointerUp={endLongPress}
+                        onPointerLeave={endLongPress}
+                        onClick={(e) => {
+                          handleChordClick(e, () => {
+                            setSelKeyIdx(i);
+                            addChordToTimeline(CO5_MIN[i], minS, "min");
+                          });
                         }}
-                        className={`absolute w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 flex items-center justify-center text-[10px] sm:text-xs font-semibold transition-all transform cursor-pointer -translate-x-1/2 -translate-y-1/2 hover:scale-110 z-20 ${borderStyles}`}
+                        className={`absolute w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 flex items-center justify-center text-[10px] sm:text-xs font-semibold transition-all transform cursor-pointer -translate-x-1/2 -translate-y-1/2 hover:scale-110 active:scale-95 z-20 ${borderStyles}`}
                         style={{
                           left: `calc(50% + ${x}px)`,
                           top: `calc(50% + ${y}px)`
@@ -1559,8 +2087,15 @@ export default function App() {
                       return (
                         <button
                           key={i}
-                          onClick={() => addChordToTimeline(ch.name, ch.semitone, ch.quality)}
-                          className="bg-[#1a1008] border border-[#4a3828] hover:border-[#d4943c] hover:bg-[#2a1e10] p-2.5 rounded-xl transition-all cursor-pointer text-center group"
+                          onPointerDown={(e) => startLongPress(e, { name: ch.name, semitone: ch.semitone, quality: ch.quality, suffix: ch.suffix, roman: ch.roman })}
+                          onPointerUp={endLongPress}
+                          onPointerLeave={endLongPress}
+                          onClick={(e) => {
+                            handleChordClick(e, () => {
+                              addChordToTimeline(ch.name, ch.semitone, ch.quality);
+                            });
+                          }}
+                          className="bg-[#1a1008] border border-[#4a3828] hover:border-[#d4943c] hover:bg-[#2a1e10] p-2.5 rounded-xl transition-all cursor-pointer text-center group active:scale-95"
                         >
                           <span className="block text-[9px] font-mono text-[#7a6a58] uppercase">
                             {ch.roman}
@@ -1615,9 +2150,9 @@ export default function App() {
                                 <button
                                   onClick={() => appendProg(p.id)}
                                   title="Anhängen (+)"
-                                  className="text-[9px] font-bold bg-[#6fc888]/10 hover:bg-[#6fc888] text-[#6fc888] hover:text-[#1a1008] px-1.5 py-1 rounded transition-all cursor-pointer"
+                                  className="text-[9px] font-bold bg-[#6fc888]/10 hover:bg-[#6fc888] text-[#6fc888] hover:text-[#1a1008] px-2 py-1 rounded transition-all cursor-pointer"
                                 >
-                                  +
+                                  + Hinzufügen
                                 </button>
                               </div>
                             </div>
@@ -1655,9 +2190,9 @@ export default function App() {
                                 <button
                                   onClick={() => appendProg(p.id)}
                                   title="Anhängen (+)"
-                                  className="text-[9px] font-bold bg-[#6fc888]/10 hover:bg-[#6fc888] text-[#6fc888] hover:text-[#1a1008] px-1.5 py-1 rounded transition-all cursor-pointer"
+                                  className="text-[9px] font-bold bg-[#6fc888]/10 hover:bg-[#6fc888] text-[#6fc888] hover:text-[#1a1008] px-2 py-1 rounded transition-all cursor-pointer"
                                 >
-                                  +
+                                  + Hinzufügen
                                 </button>
                               </div>
                             </div>
@@ -1880,6 +2415,435 @@ export default function App() {
               </div>
             </motion.div>
           )}
+
+          {tab === "pedalboard" && (
+            <motion.div
+              key="pedalboard"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.25 }}
+              className="w-full"
+            >
+              {/* Board Header */}
+              <div className="flex flex-col sm:flex-row justify-between items-center bg-[#25180f] border border-[#4a3828] rounded-t-2xl px-6 py-4 gap-2 shadow-lg">
+                <div>
+                  <h3 className="text-xl font-serif font-black text-[#d4943c] tracking-tight">Analog Switcher & FX Board</h3>
+                  <p className="text-[10px] text-[#a89880] font-mono uppercase tracking-wider">Moduliere deine Akkorde & Recording-Spuren durch Web Audio DSP-Pedale</p>
+                </div>
+                <div className="flex gap-2 text-xs font-bold text-[#c8b8a4] bg-[#120a04] px-4 py-1.5 rounded-lg border border-[#4a3828]/50">
+                  <span className="flex items-center gap-1.5"><Sliders size={12} className="text-[#a89880]" /> 4-Pedal DaisyChain</span>
+                </div>
+              </div>
+
+              {/* Daisy Chain Pedals Floor Container */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 bg-[#120a04]/90 border-x border-b border-[#4a3828] rounded-b-2xl p-6 shadow-2xl relative overflow-hidden backdrop-blur-md">
+                
+                {/* PEDAL 1: OVERDRIVE */}
+                <div 
+                  className={`flex flex-col justify-between rounded-xl bg-gradient-to-b from-[#b45309] to-[#78350f] border-2 transition-all p-4 duration-300 relative shadow-[0_15px_30px_rgba(0,0,0,0.6)] ${
+                    pedalboard.overdrive.active ? "border-[#f59e0b] shadow-[0_0_20px_rgba(245,158,11,0.25)]" : "border-[#4a3828] grayscale-[30%] opacity-85"
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-[10px] bg-black/40 text-[#f0e0cc] px-2 py-0.5 rounded font-mono uppercase tracking-widest">DRIVE-01</span>
+                    {/* Glowing active LED */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-mono text-white/65">STATUS</span>
+                      <div className={`w-3 h-3 rounded-full transition-all duration-300 ${pedalboard.overdrive.active ? "bg-red-500 shadow-[0_0_12px_#ef4444]" : "bg-red-900 border border-black/40"}`} />
+                    </div>
+                  </div>
+
+                  <div className="text-center mb-6">
+                    <h4 className="text-lg font-serif font-black tracking-tighter uppercase text-yellow-105">Overdrive</h4>
+                    <p className="text-[8px] tracking-wide text-amber-200/60 font-mono -mt-1 uppercase">Warm Analog Distortion</p>
+                  </div>
+
+                  {/* Knobs */}
+                  <div className="grid grid-cols-3 gap-2 mb-6 bg-black/35 rounded-lg p-2 border border-white/5">
+                    <Knob 
+                      label="Gain" 
+                      value={pedalboard.overdrive.drive} 
+                      min={0.1} 
+                      max={1.0} 
+                      onChange={(v) => setPedalboard(prev => ({ ...prev, overdrive: { ...prev.overdrive, drive: v } }))} 
+                    />
+                    <Knob 
+                      label="Tone" 
+                      value={pedalboard.overdrive.tone} 
+                      min={0.1} 
+                      max={1.0} 
+                      onChange={(v) => setPedalboard(prev => ({ ...prev, overdrive: { ...prev.overdrive, tone: v } }))} 
+                    />
+                    <Knob 
+                      label="Vol" 
+                      value={pedalboard.overdrive.volume} 
+                      min={0.1} 
+                      max={1.5} 
+                      onChange={(v) => setPedalboard(prev => ({ ...prev, overdrive: { ...prev.overdrive, volume: v } }))} 
+                    />
+                  </div>
+
+                  {/* Metal Stomp switch */}
+                  <div className="flex flex-col items-center mt-auto">
+                    <button 
+                      onClick={() => {
+                        initAudio();
+                        setPedalboard(prev => ({ ...prev, overdrive: { ...prev.overdrive, active: !prev.overdrive.active } }));
+                      }}
+                      className="w-12 h-12 rounded-full bg-gradient-to-b from-gray-300 via-gray-400 to-gray-500 border-4 border-gray-600 shadow-[0_6px_0_#4b5563,0_10px_20px_rgba(0,0,0,0.4)] active:translate-y-1 active:shadow-[0_2px_0_#4b5563,0_4px_10px_rgba(0,0,0,0.4)] transition-all cursor-pointer flex items-center justify-center font-bold text-gray-800 text-xs"
+                      title="Stomp Switch"
+                    >
+                      🔘
+                    </button>
+                    <span className="text-[9px] font-bold text-yellow-100 mt-2 tracking-widest uppercase">STOMP DRIVE</span>
+                  </div>
+                </div>
+
+                {/* PEDAL 2: ANALOG CHORUS */}
+                <div 
+                  className={`flex flex-col justify-between rounded-xl bg-gradient-to-b from-[#1d4ed8] to-[#1e3a8a] border-2 transition-all p-4 duration-300 relative shadow-[0_15px_30px_rgba(0,0,0,0.6)] ${
+                    pedalboard.chorus.active ? "border-[#3b82f6] shadow-[0_0_20px_rgba(59,130,246,0.25)]" : "border-[#4a3828] grayscale-[30%] opacity-85"
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-[10px] bg-black/40 text-[#f0e0cc] px-2 py-0.5 rounded font-mono uppercase tracking-widest">CHO-02</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-mono text-white/65">STATUS</span>
+                      <div className={`w-3 h-3 rounded-full transition-all duration-300 ${pedalboard.chorus.active ? "bg-cyan-400 shadow-[0_0_12px_#22d3ee]" : "bg-cyan-900 border border-black/40"}`} />
+                    </div>
+                  </div>
+
+                  <div className="text-center mb-6">
+                    <h4 className="text-lg font-serif font-black tracking-tighter uppercase text-cyan-100">Chorus</h4>
+                    <p className="text-[8px] tracking-wide text-cyan-200/60 font-mono -mt-1 uppercase">Warm Stereo Width</p>
+                  </div>
+
+                  {/* Knobs */}
+                  <div className="grid grid-cols-3 gap-2 mb-6 bg-black/35 rounded-lg p-2 border border-white/5">
+                    <Knob 
+                      label="Rate" 
+                      value={pedalboard.chorus.rate} 
+                      min={0.1} 
+                      max={1.0} 
+                      onChange={(v) => setPedalboard(prev => ({ ...prev, chorus: { ...prev.chorus, rate: v } }))} 
+                    />
+                    <Knob 
+                      label="Depth" 
+                      value={pedalboard.chorus.depth} 
+                      min={0.1} 
+                      max={1.0} 
+                      onChange={(v) => setPedalboard(prev => ({ ...prev, chorus: { ...prev.chorus, depth: v } }))} 
+                    />
+                    <Knob 
+                      label="Mix" 
+                      value={pedalboard.chorus.mix} 
+                      min={0.0} 
+                      max={1.0} 
+                      onChange={(v) => setPedalboard(prev => ({ ...prev, chorus: { ...prev.chorus, mix: v } }))} 
+                    />
+                  </div>
+
+                  {/* Metal Stomp switch */}
+                  <div className="flex flex-col items-center mt-auto">
+                    <button 
+                      onClick={() => {
+                        initAudio();
+                        setPedalboard(prev => ({ ...prev, chorus: { ...prev.chorus, active: !prev.chorus.active } }));
+                      }}
+                      className="w-12 h-12 rounded-full bg-gradient-to-b from-gray-300 via-gray-400 to-gray-500 border-4 border-gray-600 shadow-[0_6px_0_#4b5563,0_10px_20px_rgba(0,0,0,0.4)] active:translate-y-1 active:shadow-[0_2px_0_#4b5563,0_4px_10px_rgba(0,0,0,0.4)] transition-all cursor-pointer flex items-center justify-center font-bold text-gray-800 text-xs"
+                      title="Stomp Switch"
+                    >
+                      🔘
+                    </button>
+                    <span className="text-[9px] font-bold text-cyan-100 mt-2 tracking-widest uppercase">STOMP CHORUS</span>
+                  </div>
+                </div>
+
+                {/* PEDAL 3: DISK ECHO (DELAY) */}
+                <div 
+                  className={`flex flex-col justify-between rounded-xl bg-gradient-to-b from-[#047857] to-[#064e3b] border-2 transition-all p-4 duration-300 relative shadow-[0_15px_30px_rgba(0,0,0,0.6)] ${
+                    pedalboard.delay.active ? "border-[#10b981] shadow-[0_0_20px_rgba(16,185,129,0.25)]" : "border-[#4a3828] grayscale-[30%] opacity-85"
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-[10px] bg-black/40 text-[#f0e0cc] px-2 py-0.5 rounded font-mono uppercase tracking-widest">DEL-03</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-mono text-white/65">STATUS</span>
+                      <div className={`w-3 h-3 rounded-full transition-all duration-300 ${pedalboard.delay.active ? "bg-emerald-400 shadow-[0_0_12px_#34d399]" : "bg-emerald-900 border border-black/40"}`} />
+                    </div>
+                  </div>
+
+                  <div className="text-center mb-6">
+                    <h4 className="text-lg font-serif font-black tracking-tighter uppercase text-emerald-100">Delay</h4>
+                    <p className="text-[8px] tracking-wide text-emerald-200/60 font-mono -mt-1 uppercase">Analog Tape Echo</p>
+                  </div>
+
+                  {/* Knobs */}
+                  <div className="grid grid-cols-3 gap-2 mb-6 bg-black/35 rounded-lg p-2 border border-white/5">
+                    <Knob 
+                      label="Time" 
+                      value={pedalboard.delay.time} 
+                      min={0.1} 
+                      max={1.0} 
+                      onChange={(v) => setPedalboard(prev => ({ ...prev, delay: { ...prev.delay, time: v } }))} 
+                    />
+                    <Knob 
+                      label="Feedb" 
+                      value={pedalboard.delay.feedback} 
+                      min={0.1} 
+                      max={0.9} 
+                      onChange={(v) => setPedalboard(prev => ({ ...prev, delay: { ...prev.delay, feedback: v } }))} 
+                    />
+                    <Knob 
+                      label="Mix" 
+                      value={pedalboard.delay.mix} 
+                      min={0.0} 
+                      max={1.0} 
+                      onChange={(v) => setPedalboard(prev => ({ ...prev, delay: { ...prev.delay, mix: v } }))} 
+                    />
+                  </div>
+
+                  {/* Metal Stomp switch */}
+                  <div className="flex flex-col items-center mt-auto">
+                    <button 
+                      onClick={() => {
+                        initAudio();
+                        setPedalboard(prev => ({ ...prev, delay: { ...prev.delay, active: !prev.delay.active } }));
+                      }}
+                      className="w-12 h-12 rounded-full bg-gradient-to-b from-gray-300 via-gray-400 to-gray-500 border-4 border-gray-600 shadow-[0_6px_0_#4b5563,0_10px_20px_rgba(0,0,0,0.4)] active:translate-y-1 active:shadow-[0_2px_0_#4b5563,0_4px_10px_rgba(0,0,0,0.4)] transition-all cursor-pointer flex items-center justify-center font-bold text-gray-800 text-xs"
+                      title="Stomp Switch"
+                    >
+                      🔘
+                    </button>
+                    <span className="text-[9px] font-bold text-emerald-100 mt-2 tracking-widest uppercase">STOMP DELAY</span>
+                  </div>
+                </div>
+
+                {/* PEDAL 4: GALAXY REVERB */}
+                <div 
+                  className={`flex flex-col justify-between rounded-xl bg-gradient-to-b from-[#6b21a8] to-[#4c1d95] border-2 transition-all p-4 duration-300 relative shadow-[0_15px_30px_rgba(0,0,0,0.6)] ${
+                    pedalboard.reverb.active ? "border-[#a855f7] shadow-[0_0_20px_rgba(168,85,247,0.25)]" : "border-[#4a3828] grayscale-[30%] opacity-85"
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-[10px] bg-black/40 text-[#f0e0cc] px-2 py-0.5 rounded font-mono uppercase tracking-widest">REV-04</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-mono text-white/65">STATUS</span>
+                      <div className={`w-3 h-3 rounded-full transition-all duration-300 ${pedalboard.reverb.active ? "bg-purple-400 shadow-[0_0_12px_#c084fc]" : "bg-purple-900 border border-black/40"}`} />
+                    </div>
+                  </div>
+
+                  <div className="text-center mb-6">
+                    <h4 className="text-lg font-serif font-black tracking-tighter uppercase text-purple-100">Reverb</h4>
+                    <p className="text-[8px] tracking-wide text-purple-200/60 font-mono -mt-1 uppercase">Ambient Space Room</p>
+                  </div>
+
+                  {/* Knobs */}
+                  <div className="grid grid-cols-2 gap-2 mb-6 bg-black/35 rounded-lg p-2 border border-white/5">
+                    <Knob 
+                      label="Decay" 
+                      value={pedalboard.reverb.decay} 
+                      min={0.5} 
+                      max={4.5} 
+                      onChange={(v) => setPedalboard(prev => ({ ...prev, reverb: { ...prev.reverb, decay: v } }))} 
+                    />
+                    <Knob 
+                      label="Mix" 
+                      value={pedalboard.reverb.mix} 
+                      min={0.0} 
+                      max={1.0} 
+                      onChange={(v) => setPedalboard(prev => ({ ...prev, reverb: { ...prev.reverb, mix: v } }))} 
+                    />
+                  </div>
+
+                  {/* Metal Stomp switch */}
+                  <div className="flex flex-col items-center mt-auto">
+                    <button 
+                      onClick={() => {
+                        initAudio();
+                        setPedalboard(prev => ({ ...prev, reverb: { ...prev.reverb, active: !prev.reverb.active } }));
+                      }}
+                      className="w-12 h-12 rounded-full bg-gradient-to-b from-gray-300 via-gray-400 to-gray-500 border-4 border-gray-600 shadow-[0_6px_0_#4b5563,0_10px_20px_rgba(0,0,0,0.4)] active:translate-y-1 active:shadow-[0_2px_0_#4b5563,0_4px_10px_rgba(0,0,0,0.4)] transition-all cursor-pointer flex items-center justify-center font-bold text-gray-800 text-xs"
+                      title="Stomp Switch"
+                    >
+                      🔘
+                    </button>
+                    <span className="text-[9px] font-bold text-purple-100 mt-2 tracking-widest uppercase">STOMP REVERB</span>
+                  </div>
+                </div>
+
+              </div>
+              <div className="text-right text-[10px] text-[#7a6a58] font-mono mt-2 uppercase tracking-wide">
+                🎸 *Alle Signale (Klavier, Gitarre, Akkorde, mikrofonaufnahmen) fließen direkt durch diese Effekte!
+              </div>
+            </motion.div>
+          )}
+
+          {tab === "recorder" && (
+            <motion.div
+              key="recorder"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.25 }}
+              className="max-w-2xl mx-auto"
+            >
+              <div className="rounded-2xl bg-[#2a1e10] border border-[#4a3828] p-6 shadow-xl text-center relative overflow-hidden">
+                {/* Visual cassette tape wheels */}
+                <div className="flex justify-center items-center gap-6 mb-8 bg-[#120a04] rounded-2xl p-6 border border-[#4a3828]/55 shadow-inner relative">
+                  
+                  {/* Cassette Left Reel */}
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#3d2b1a] to-[#120a04] border-4 border-[#7a6a58]/40 shadow-xl flex items-center justify-center relative overflow-hidden">
+                    <motion.div 
+                      className="w-14 h-14 rounded-full border border-dashed border-[#d4943c] flex items-center justify-center"
+                      animate={isRecording ? { rotate: 360 } : {}}
+                      transition={isRecording ? { repeat: Infinity, duration: 4.8, ease: "linear" } : {}}
+                    >
+                      <span className="text-[10px] text-[#7a6a58]">⚙️</span>
+                    </motion.div>
+                    <div className="absolute w-3 h-3 rounded-full bg-[#120a04] border border-[#d4943c] z-10" />
+                  </div>
+
+                  {/* Cassette Tape window showing "TAPE LEVEL" */}
+                  <div className="flex flex-col items-center bg-[#1a1008] border border-[#4a3828]/60 px-4 py-2 rounded-lg">
+                    <span className="text-[8px] font-mono uppercase tracking-widest text-[#a89880] mb-1">RECORDING METER</span>
+                    {/* Glowing LED segments */}
+                    <div className="flex gap-0.5 h-3 items-end">
+                      {Array.from({ length: 12 }).map((_, i) => {
+                        const glowing = isRecording && (recordingSeconds % 4 >= i % 4);
+                        return (
+                          <div 
+                            key={i} 
+                            className={`w-1.5 transition-all duration-150 rounded-sm ${
+                              glowing 
+                                ? i > 9 
+                                  ? "h-3 bg-red-500 shadow-[0_0_8px_red]" 
+                                  : i > 6 
+                                    ? "h-2.5 bg-yellow-400 shadow-[0_0_8px_yellow]" 
+                                    : "h-2 bg-green-500 shadow-[0_0_8px_green]"
+                                : "h-1 bg-[#1a1008] border border-stone-850"
+                            }`} 
+                          />
+                        );
+                      })}
+                    </div>
+                    <span className="text-[10px] text-[#d4943c] font-mono mt-2 font-bold select-none">
+                      {isRecording ? `REC ${Math.floor(recordingSeconds / 60)}:${(recordingSeconds % 60).toString().padStart(2, "0")}` : "00:00"}
+                    </span>
+                  </div>
+
+                  {/* Cassette Right Reel */}
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#3d2b1a] to-[#120a04] border-4 border-[#7a6a58]/40 shadow-xl flex items-center justify-center relative overflow-hidden">
+                    <motion.div 
+                      className="w-14 h-14 rounded-full border border-dashed border-[#d4943c] flex items-center justify-center"
+                      animate={isRecording ? { rotate: 360 } : {}}
+                      transition={isRecording ? { repeat: Infinity, duration: 4.8, ease: "linear" } : {}}
+                    >
+                      <span className="text-[10px] text-[#7a6a58]">⚙️</span>
+                    </motion.div>
+                    <div className="absolute w-3 h-3 rounded-full bg-[#120a04] border border-[#d4943c] z-10" />
+                  </div>
+
+                </div>
+
+                {/* Recorder Control interface */}
+                <div className="flex flex-col gap-4">
+                  <h3 className="text-xl font-serif font-black text-[#f0e0cc] tracking-tight">Vocal- & Mic-Aufnahmegerät</h3>
+                  <p className="text-xs text-[#a89880] -mt-2">Singe deine Vocals, nehme dein Klatschen oder dein analoges Instrument auf, um es in der Timeline zu nutzen</p>
+                  
+                  <div className="flex justify-center gap-4 my-2">
+                    {!isRecording ? (
+                      <button
+                        onClick={startRecording}
+                        className="py-3 px-8 bg-[#b84a32] hover:bg-[#b84a32]/90 text-white rounded-xl text-xs font-black tracking-widest uppercase cursor-pointer transition-all flex items-center gap-2 border-0 shadow-lg"
+                      >
+                        <span className="w-3.5 h-3.5 bg-white rounded-full animate-ping" /> Aufnahme starten
+                      </button>
+                    ) : (
+                      <button
+                        onClick={stopRecording}
+                        className="py-3 px-8 bg-[#120a04] text-[#d4943c] hover:bg-[#120a04]/60 rounded-xl text-xs font-black tracking-widest uppercase cursor-pointer transition-all flex items-center gap-2 border border-[#d4943c] shadow-lg animate-pulse"
+                      >
+                        <Square size={13} fill="currentColor" /> Aufnahme stoppen
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Captured clips catalog */}
+                <div className="mt-8 border-t border-[#4a3828]/40 pt-6 text-left">
+                  <h4 className="text-xs font-mono uppercase tracking-wider text-[#a89880] mb-4">Aufgenommene Clips ({recordings.length})</h4>
+                  {recordings.length === 0 ? (
+                    <div className="text-center py-6 px-4 bg-[#120a04]/40 border border-dashed border-[#5a4838]/60 rounded-xl text-xs text-[#a89880]">
+                      Noch keine Audiodateien vorhanden. Starte eine Aufnahme mit dem Mikrofon!
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2 max-h-52 overflow-y-auto w-full pr-1.5">
+                      {recordings.map((rec) => (
+                        <div 
+                          key={rec.id} 
+                          className="flex items-center justify-between bg-[#120a04] hover:bg-[#120a04]/80 p-3 rounded-xl border border-[#4a3828]/40 transition-all gap-2"
+                        >
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            <Volume2 size={14} className="text-[#d4943c] shrink-0" />
+                            <div className="truncate">
+                              <p className="text-xs font-black text-[#f0e0cc] truncate">{rec.name}</p>
+                              <p className="text-[9px] text-[#a89880] font-mono">Dauer: {rec.duration.toFixed(2)} Sek.</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <audio src={rec.url} controls className="hidden" id={`rec-aud-${rec.id}`} />
+                            <button
+                              onClick={() => {
+                                if (rec.buffer) {
+                                  initAudio();
+                                  const ctx = audioContextRef.current;
+                                  const masterGain = masterGainRef.current;
+                                  if (ctx && masterGain) {
+                                    const source = ctx.createBufferSource();
+                                    source.buffer = rec.buffer;
+                                    source.connect(masterGain);
+                                    source.start(ctx.currentTime);
+                                    showToast("Wiedergabe durch Pedal-DSP-Board!");
+                                  }
+                                } else {
+                                  const aud = document.getElementById(`rec-aud-${rec.id}`) as HTMLAudioElement;
+                                  if (aud) {
+                                    aud.currentTime = 0;
+                                    aud.play().catch(() => {});
+                                  }
+                                }
+                              }}
+                              className="px-2.5 py-1 text-[10px] font-bold bg-[#d4943c]/10 text-[#d4943c] hover:bg-[#d4943c] hover:text-[#1a1008] rounded transition-all cursor-pointer"
+                            >
+                              Anhören
+                            </button>
+                            <button
+                              onClick={() => addRecordingToTimeline(rec)}
+                              title="An Timeline anfügen"
+                              className="px-2.5 py-1 text-[10px] font-bold bg-[#d4943c] text-neutral-900 border border-[#d4943c] hover:bg-[#f3a83c] rounded transition-all cursor-pointer flex items-center gap-1"
+                            >
+                              + An Arranger
+                            </button>
+                            <button
+                              onClick={() => deleteRecording(rec.id)}
+                              className="p-1 px-1.5 text-xs text-red-400 hover:text-white hover:bg-red-950 rounded transition-all cursor-pointer border-0 bg-transparent"
+                              title="Aufnahme löschen"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
@@ -1936,7 +2900,7 @@ export default function App() {
                     const isActive = idx === playIdx;
                     if (item.type === "label") {
                       return (
-                        <div
+                         <div
                           key={item.id}
                           className={`px-2 py-0.5 rounded-lg text-[8px] border shrink-0 font-bold ${
                             isActive
@@ -1945,6 +2909,20 @@ export default function App() {
                           }`}
                         >
                           {item.name}
+                        </div>
+                      );
+                    }
+                    if (item.type === "recording") {
+                      return (
+                        <div
+                          key={item.id}
+                          className={`px-2 py-0.5 rounded-lg text-[8px] border shrink-0 font-bold flex items-center gap-1 ${
+                            isActive
+                              ? "border-[#d4943c] bg-[#d4943c]/15 text-[#d4943c]"
+                              : "border-rose-700/30 bg-rose-950/10 text-rose-400"
+                          }`}
+                        >
+                          <Mic size={8} /> {item.name || "Mic"} ({item.duration?.toFixed(1)}s)
                         </div>
                       );
                     }
@@ -2133,34 +3111,54 @@ export default function App() {
               </div>
 
               {/* Row 3: Advanced Drum & Bass Rhythm Configs (Slick iOS Channel Strip Layout) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pb-3 border-b border-[#4a3828]/40">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 pb-3 border-b border-[#4a3828]/40">
                 {/* Channel Strip 1: Drums System */}
-                <div className="bg-[#1f130a] border border-[#4a3828]/50 p-3 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-inner">
-                  <div className="flex items-center gap-3 shrink-0">
-                    {/* iOS style Toggle Switch */}
-                    <button
-                      onClick={() => setDrumsOn(!drumsOn)}
-                      className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer relative flex items-center shrink-0 ${
-                        drumsOn ? "bg-[#4a9e5c]" : "bg-[#120a04] border border-[#4a3828]/60"
-                      }`}
-                    >
-                      <motion.div
-                        layout
-                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                        className="w-5 h-5 rounded-full bg-white shadow-md"
-                        style={{ x: drumsOn ? 20 : 0 }}
-                      />
-                    </button>
-                    <div className="text-left font-semibold">
-                      <span className="block text-xs text-[#c8b8a4]">Schlagzeug (Drums)</span>
-                      <span className="block text-[10px] text-[#7a6a58] font-mono tracking-wide">
-                        STATUS: {drumsOn ? "ACTIVE" : "MUTED"}
-                      </span>
+                <div className="bg-[#1f130a] border border-[#4a3828]/50 p-3 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-inner">
+                  <div className="flex items-center gap-3 shrink-0 justify-between md:justify-start">
+                    <div className="flex items-center gap-3">
+                      {/* iOS style Toggle Switch */}
+                      <button
+                        onClick={() => setDrumsOn(!drumsOn)}
+                        className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer relative flex items-center shrink-0 ${
+                          drumsOn ? "bg-[#4a9e5c]" : "bg-[#120a04] border border-[#4a3828]/60"
+                        }`}
+                      >
+                        <motion.div
+                          layout
+                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                          className="w-5 h-5 rounded-full bg-white shadow-md"
+                          style={{ x: drumsOn ? 20 : 0 }}
+                        />
+                      </button>
+                      <div className="text-left font-semibold">
+                        <span className="block text-xs text-[#c8b8a4]">Schlagzeug (Drums)</span>
+                        <span className="block text-[10px] text-[#7a6a58] font-mono tracking-wide">
+                          STATUS: {drumsOn ? "ACTIVE" : "MUTED"}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
+                  {/* Volume Slider Section */}
+                  <div className="flex items-center gap-2 bg-[#120a04]/40 px-2.5 py-1.5 rounded-xl border border-[#4a3828]/30 max-w-full md:max-w-[140px] grow">
+                    <Volume2 size={12} className={drumsOn ? "text-[#d4943c]" : "text-neutral-600"} />
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={drumsVolume}
+                      onChange={(e) => setDrumsVolume(Number(e.target.value))}
+                      className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize"
+                      disabled={!drumsOn}
+                    />
+                    <span className="text-[10px] font-mono font-extrabold text-[#d4943c] w-6 text-right">
+                      {Math.round(drumsVolume * 100)}%
+                    </span>
+                  </div>
+
                   {/* iOS Style Segmented Control */}
-                  <div className="flex bg-[#120a04] p-0.5 rounded-xl border border-[#4a3828]/40 select-none overflow-x-auto scrollbar-none w-full sm:w-auto relative gap-0.5 items-center">
+                  <div className="flex bg-[#120a04] p-0.5 rounded-xl border border-[#4a3828]/40 select-none overflow-x-auto scrollbar-none w-full md:w-auto relative gap-0.5 items-center">
                     {DRUM_OPTIONS.map((opt) => {
                       const isActive = drumPattern === opt.id;
                       return (
@@ -2189,32 +3187,52 @@ export default function App() {
                 </div>
 
                 {/* Channel Strip 2: Bass System */}
-                <div className="bg-[#1f130a] border border-[#4a3828]/50 p-3 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-inner">
-                  <div className="flex items-center gap-3 shrink-0">
-                    {/* iOS style Toggle Switch */}
-                    <button
-                      onClick={() => setBasslineOn(!basslineOn)}
-                      className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer relative flex items-center shrink-0 ${
-                        basslineOn ? "bg-[#4a9e5c]" : "bg-[#120a04] border border-[#4a3828]/60"
-                      }`}
-                    >
-                      <motion.div
-                        layout
-                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                        className="w-5 h-5 rounded-full bg-white shadow-md"
-                        style={{ x: basslineOn ? 20 : 0 }}
-                      />
-                    </button>
-                    <div className="text-left font-semibold">
-                      <span className="block text-xs text-[#c8b8a4]">Bass-Line (Routine)</span>
-                      <span className="block text-[10px] text-[#7a6a58] font-mono tracking-wide">
-                        STATUS: {basslineOn ? "ACTIVE" : "MUTED"}
-                      </span>
+                <div className="bg-[#1f130a] border border-[#4a3828]/50 p-3 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-inner">
+                  <div className="flex items-center gap-3 shrink-0 justify-between md:justify-start">
+                    <div className="flex items-center gap-3">
+                      {/* iOS style Toggle Switch */}
+                      <button
+                        onClick={() => setBasslineOn(!basslineOn)}
+                        className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer relative flex items-center shrink-0 ${
+                          basslineOn ? "bg-[#4a9e5c]" : "bg-[#120a04] border border-[#4a3828]/60"
+                        }`}
+                      >
+                        <motion.div
+                          layout
+                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                          className="w-5 h-5 rounded-full bg-white shadow-md"
+                          style={{ x: basslineOn ? 20 : 0 }}
+                        />
+                      </button>
+                      <div className="text-left font-semibold">
+                        <span className="block text-xs text-[#c8b8a4]">Bass-Line (Routine)</span>
+                        <span className="block text-[10px] text-[#7a6a58] font-mono tracking-wide">
+                          STATUS: {basslineOn ? "ACTIVE" : "MUTED"}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
+                  {/* Volume Slider Section */}
+                  <div className="flex items-center gap-2 bg-[#120a04]/40 px-2.5 py-1.5 rounded-xl border border-[#4a3828]/30 max-w-full md:max-w-[140px] grow">
+                    <Volume2 size={12} className={basslineOn ? "text-[#d4943c]" : "text-neutral-600"} />
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={bassVolume}
+                      onChange={(e) => setBassVolume(Number(e.target.value))}
+                      className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize"
+                      disabled={!basslineOn}
+                    />
+                    <span className="text-[10px] font-mono font-extrabold text-[#d4943c] w-6 text-right">
+                      {Math.round(bassVolume * 100)}%
+                    </span>
+                  </div>
+
                   {/* iOS Style Segmented Control */}
-                  <div className="flex bg-[#120a04] p-0.5 rounded-xl border border-[#4a3828]/40 select-none overflow-x-auto scrollbar-none w-full sm:w-auto relative gap-0.5 items-center">
+                  <div className="flex bg-[#120a04] p-0.5 rounded-xl border border-[#4a3828]/40 select-none overflow-x-auto scrollbar-none w-full md:w-auto relative gap-0.5 items-center">
                     {BASS_OPTIONS.map((opt) => {
                       const isActive = bassPattern === opt.id;
                       return (
@@ -2271,6 +3289,44 @@ export default function App() {
                             </span>
                             <button
                               onClick={() => removeTimelineItem(item.id)}
+                              className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[#b84a32] text-white flex items-center justify-center text-[8px] border border-[#1a1008] cursor-pointer"
+                            >
+                              <X size={8} />
+                            </button>
+                          </motion.div>
+                        );
+                      }
+
+                      if (item.type === "recording") {
+                        return (
+                          <motion.div
+                            key={item.id}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            className={`flex-shrink-0 relative overflow-visible px-4 py-2.5 rounded-xl border flex flex-col items-center justify-center transition-all ${
+                              isActive
+                                ? "border-[#d4943c] bg-[#d4943c]/15 text-[#d4943c] shadow-[0_0_12px_rgba(212,148,60,0.3)] scale-102"
+                                : "border-rose-400/30 bg-rose-950/10 text-rose-300"
+                            }`}
+                          >
+                            <span className="text-[7px] font-mono text-[#a89880] absolute top-1 left-2">
+                              {idx + 1}
+                            </span>
+                            <div className="flex items-center gap-1.5 mt-1.5 select-none">
+                              <Mic size={10} className="text-rose-400 animate-pulse" />
+                              <span className="text-xs font-bold truncate max-w-[80px]">
+                                {item.name || "Microphone"}
+                              </span>
+                            </div>
+                            <span className="text-[9px] font-mono text-[#a89880] mt-0.5">
+                              {item.duration ? `${item.duration.toFixed(1)}s` : "0.0s"}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeTimelineItem(item.id);
+                              }}
                               className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[#b84a32] text-white flex items-center justify-center text-[8px] border border-[#1a1008] cursor-pointer"
                             >
                               <X size={8} />
@@ -2453,6 +3509,165 @@ export default function App() {
           >
             {toastMsg}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+
+
+      {/* iOS Style Long Press Context Menu Overlay */}
+      <AnimatePresence>
+        {contextMenu && contextMenu.isOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-md"
+            onClick={() => setContextMenu(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.94, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.94, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 450, damping: 28 }}
+              className="bg-[#1f130a] border border-[#d4943c]/65 p-6 rounded-3xl max-w-[320px] w-full shadow-[0_24px_60px_rgba(0,0,0,0.9)] text-center relative pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Context Menu Header */}
+              <div className="flex justify-between items-center mb-4 border-b border-[#4a3828]/40 pb-3">
+                <span className="text-[10px] font-mono text-[#7a6a58] uppercase font-black tracking-widest">
+                  iOS Akkord-Optionen
+                </span>
+                <button
+                  onClick={() => setContextMenu(null)}
+                  className="text-[#7a6a58] hover:text-[#d4943c] cursor-pointer text-xs font-mono font-bold hover:scale-110 transition-transform"
+                >
+                  Schließen
+                </button>
+              </div>
+
+              {/* Title representation */}
+              <div className="py-2.5 mb-5 bg-[#120a04] border border-[#4a3828]/40 rounded-2xl">
+                <span className="block text-4xl font-serif font-black text-[#d4943c] tracking-tight drop-shadow font-serif">
+                  {capoName(contextMenu.chordData.semitone, contextMenu.chordData.suffix)}
+                </span>
+                <span className="block text-[10px] font-mono text-[#7a6a58] mt-1 uppercase tracking-wider font-bold">
+                  Stufe {contextMenu.chordData.roman || "N/A"} • Root: {contextMenu.chordData.semitone}
+                </span>
+              </div>
+
+              {/* Action Rows */}
+              <div className="space-y-2">
+                <button
+                  onClick={() => {
+                    addChordToTimeline(contextMenu.chordData.name, contextMenu.chordData.semitone, contextMenu.chordData.quality);
+                    setContextMenu(null);
+                    showToast(`${contextMenu.chordData.name} am Ende hinzugefügt`);
+                  }}
+                  className="w-full flex items-center justify-between bg-[#2a1e10] hover:bg-[#d4943c] hover:text-[#1a1008] text-[#f0e0cc] border border-[#4a3828] font-bold py-3 px-4 rounded-xl text-xs transition-all cursor-pointer text-left active:scale-[0.97]"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm">➕</span> Am Ende anhängen
+                  </span>
+                  <span className="text-[9px] font-mono opacity-50 uppercase font-black">Append</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const match = getDiatonicChords(selKey).find(
+                      (c) => c.semitone === contextMenu.chordData.semitone && c.quality === contextMenu.chordData.quality
+                    );
+                    const suffix = match ? match.suffix : contextMenu.chordData.quality === "min" ? "m" : contextMenu.chordData.quality === "dim" ? "dim" : "";
+                    const roman = match ? match.roman : "";
+                    const newItem: TimelineItem = {
+                      type: "chord",
+                      name: contextMenu.chordData.name,
+                      semitone: contextMenu.chordData.semitone,
+                      quality: contextMenu.chordData.quality,
+                      suffix,
+                      roman,
+                      id: uidRef.current++
+                    };
+                    setTimeline((prev) => [newItem, ...prev]);
+                    playChordInst(contextMenu.chordData.semitone, contextMenu.chordData.quality, 0.7, strumPattern);
+                    setContextMenu(null);
+                    showToast(`${contextMenu.chordData.name} an den Anfang gesetzt`);
+                  }}
+                  className="w-full flex items-center justify-between bg-[#2a1e10] hover:bg-[#d4943c] hover:text-[#1a1008] text-[#f0e0cc] border border-[#4a3828] font-bold py-3 px-4 rounded-xl text-xs transition-all cursor-pointer text-left active:scale-[0.97]"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm">🔼</span> Am Anfang einfügen
+                  </span>
+                  <span className="text-[9px] font-mono opacity-50 uppercase font-black">Prepend</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    playChordInst(contextMenu.chordData.semitone, contextMenu.chordData.quality, 0.8, strumPattern);
+                  }}
+                  className="w-full flex items-center justify-between bg-[#2a1e10] hover:bg-[#d4943c] hover:text-[#1a1008] text-[#f0e0cc] border border-[#4a3828] font-bold py-3 px-4 rounded-xl text-xs transition-all cursor-pointer text-left active:scale-[0.97]"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm">🔊</span> Akkord anspielen
+                  </span>
+                  <span className="text-[9px] font-mono opacity-50 uppercase font-black">Audition</span>
+                </button>
+
+                <div className="h-px bg-[#4a3828]/40 my-3" />
+
+                {/* Sub-variant selector */}
+                <span className="block text-[10px] font-mono text-[#7a6a58] uppercase text-left tracking-widest mb-1.5 font-bold">
+                  Variante anpassen:
+                </span>
+                <div className="grid grid-cols-3 gap-1.5 mb-3">
+                  {(["maj", "min", "dim"] as const).map((q) => {
+                    const qLabel = q === "maj" ? "Dur" : q === "min" ? "Moll" : "Verm.";
+                    const rootNote = noteNameAny(contextMenu.chordData.semitone, selKey);
+                    const newName = rootNote + (q === "min" ? "m" : q === "dim" ? "dim" : "");
+                    const isSelected = contextMenu.chordData.quality === q;
+
+                    return (
+                      <button
+                        key={q}
+                        onClick={() => {
+                          setContextMenu({
+                            ...contextMenu,
+                            chordData: {
+                              ...contextMenu.chordData,
+                              quality: q,
+                              name: newName,
+                              suffix: q === "min" ? "m" : q === "dim" ? "dim" : ""
+                            }
+                          });
+                          playChordInst(contextMenu.chordData.semitone, q, 0.7, strumPattern);
+                        }}
+                        className={`py-2 px-2 rounded-xl text-[10px] font-bold border transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-[#d4943c] border-[#d4943c] text-[#1a1008] font-black"
+                            : "bg-[#120a04] border-[#4a3828]/50 text-[#7a6a58] hover:text-[#c8b8a4]"
+                        }`}
+                      >
+                        {qLabel}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="h-px bg-[#4a3828]/40 my-3" />
+
+                <button
+                  onClick={() => {
+                    setTheoryKey(contextMenu.chordData.semitone);
+                    setTab("theorie");
+                    setContextMenu(null);
+                    showToast(`In Theorie analysiert: ${contextMenu.chordData.name}`);
+                  }}
+                  className="w-full flex items-center justify-between bg-[#4a9e5c]/10 hover:bg-[#4a9e5c] text-[#6fc888] hover:text-[#1a1008] border border-[#4a9e5c]/35 font-bold py-3 px-4 rounded-xl text-xs transition-all cursor-pointer text-left active:scale-[0.97]"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm">🌀</span> Musiktheorie Analyse
+                  </span>
+                  <span className="text-[9px] font-mono opacity-80 uppercase font-black">Theory</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
