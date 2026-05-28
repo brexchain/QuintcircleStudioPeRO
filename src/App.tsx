@@ -30,7 +30,8 @@ import {
   X,
   Sun,
   Moon,
-  Disc
+  Disc,
+  Download
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -91,11 +92,12 @@ const PROG_DB = [
     drumPattern: "standard",
     bassPattern: "root",
     currentInst: "piano",
+    fxPresetId: "cozy_lounge",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: false },
-      delay: { active: false },
-      reverb: { active: true, decay: 2.2, mix: 0.35 }
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 1.4, depth: 0.3, mix: 0.28 },
+      delay: { active: false, time: 0.35, feedback: 0.3, mix: 0.25 },
+      reverb: { active: true, decay: 1.4, mix: 0.26 }
     }
   },
   {
@@ -115,11 +117,12 @@ const PROG_DB = [
     drumPattern: "rock",
     bassPattern: "walk",
     currentInst: "guitar_electric_dist",
+    fxPresetId: "crunchy",
     pedalboard: {
-      overdrive: { active: true, drive: 0.6, tone: 0.5, volume: 0.7 },
-      chorus: { active: false },
-      delay: { active: false },
-      reverb: { active: true, decay: 1.5, mix: 0.25 }
+      overdrive: { active: true, drive: 0.52, tone: 0.6, volume: 0.8 },
+      chorus: { active: false, rate: 1.5, depth: 0.35, mix: 0.4 },
+      delay: { active: false, time: 0.38, feedback: 0.45, mix: 0.4 },
+      reverb: { active: true, decay: 1.8, mix: 0.22 }
     }
   },
   {
@@ -139,11 +142,12 @@ const PROG_DB = [
     drumPattern: "standard",
     bassPattern: "melodic",
     currentInst: "piano",
+    fxPresetId: "dream_space",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: false },
-      delay: { active: true, time: 0.4, feedback: 0.5, mix: 0.3 },
-      reverb: { active: true, decay: 3.5, mix: 0.45 }
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 1.2, depth: 0.6, mix: 0.55 },
+      delay: { active: true, time: 0.52, feedback: 0.55, mix: 0.5 },
+      reverb: { active: true, decay: 3.5, mix: 0.48 }
     }
   },
   {
@@ -163,11 +167,12 @@ const PROG_DB = [
     drumPattern: "standard",
     bassPattern: "root",
     currentInst: "piano",
+    fxPresetId: "cozy_lounge",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: true, rate: 1.5, depth: 0.35, mix: 0.3 },
-      delay: { active: false },
-      reverb: { active: true, decay: 2.0, mix: 0.3 }
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 1.4, depth: 0.3, mix: 0.28 },
+      delay: { active: false, time: 0.35, feedback: 0.3, mix: 0.25 },
+      reverb: { active: true, decay: 1.4, mix: 0.26 }
     }
   },
   {
@@ -187,11 +192,12 @@ const PROG_DB = [
     drumPattern: "standard",
     bassPattern: "syncopated",
     currentInst: "guitar_acoustic",
+    fxPresetId: "surf_spring",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: true, rate: 2.0, depth: 0.2, mix: 0.3 },
-      delay: { active: false },
-      reverb: { active: true, decay: 2.5, mix: 0.3 }
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 2.4, depth: 0.18, mix: 0.25 },
+      delay: { active: true, time: 0.22, feedback: 0.32, mix: 0.4 },
+      reverb: { active: true, decay: 2.8, mix: 0.52 }
     }
   },
   {
@@ -211,11 +217,12 @@ const PROG_DB = [
     drumPattern: "latin",
     bassPattern: "melodic",
     currentInst: "guitar",
+    fxPresetId: "surf_spring",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: false },
-      delay: { active: false },
-      reverb: { active: true, decay: 2.5, mix: 0.35 }
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 2.4, depth: 0.18, mix: 0.25 },
+      delay: { active: true, time: 0.22, feedback: 0.32, mix: 0.4 },
+      reverb: { active: true, decay: 2.8, mix: 0.52 }
     }
   },
   {
@@ -239,11 +246,12 @@ const PROG_DB = [
     drumPattern: "standard",
     bassPattern: "root",
     currentInst: "strings",
+    fxPresetId: "cosmic_clouds",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: false },
-      delay: { active: false },
-      reverb: { active: true, decay: 3.0, mix: 0.4 }
+      overdrive: { active: false, drive: 0.4, tone: 0.5, volume: 0.7 },
+      chorus: { active: true, rate: 0.8, depth: 0.5, mix: 0.45 },
+      delay: { active: true, time: 0.72, feedback: 0.75, mix: 0.58 },
+      reverb: { active: true, decay: 5.2, mix: 0.62 }
     }
   },
   {
@@ -263,11 +271,12 @@ const PROG_DB = [
     drumPattern: "standard",
     bassPattern: "root",
     currentInst: "piano",
+    fxPresetId: "cosmic_clouds",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: false },
-      delay: { active: false },
-      reverb: { active: true, decay: 4.0, mix: 0.5 }
+      overdrive: { active: false, drive: 0.4, tone: 0.5, volume: 0.7 },
+      chorus: { active: true, rate: 0.8, depth: 0.5, mix: 0.45 },
+      delay: { active: true, time: 0.72, feedback: 0.75, mix: 0.58 },
+      reverb: { active: true, decay: 5.2, mix: 0.62 }
     }
   },
   {
@@ -295,11 +304,12 @@ const PROG_DB = [
     drumPattern: "rock",
     bassPattern: "walk",
     currentInst: "guitar_electric_clean",
+    fxPresetId: "crunchy",
     pedalboard: {
-      overdrive: { active: true, drive: 0.25, tone: 0.6, volume: 0.85 },
-      chorus: { active: false },
-      delay: { active: true, time: 0.2, feedback: 0.2, mix: 0.25 },
-      reverb: { active: true, decay: 1.8, mix: 0.2 }
+      overdrive: { active: true, drive: 0.52, tone: 0.6, volume: 0.8 },
+      chorus: { active: false, rate: 1.5, depth: 0.35, mix: 0.4 },
+      delay: { active: false, time: 0.38, feedback: 0.45, mix: 0.4 },
+      reverb: { active: true, decay: 1.8, mix: 0.22 }
     }
   },
   {
@@ -319,11 +329,12 @@ const PROG_DB = [
     drumPattern: "rock",
     bassPattern: "syncopated",
     currentInst: "synth",
+    fxPresetId: "psychedelic",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: false },
-      delay: { active: true, time: 0.35, feedback: 0.4, mix: 0.35 },
-      reverb: { active: true, decay: 2.5, mix: 0.3 }
+      overdrive: { active: true, drive: 0.35, tone: 0.5, volume: 0.75 },
+      chorus: { active: true, rate: 4.2, depth: 0.75, mix: 0.65 },
+      delay: { active: false, time: 0.3, feedback: 0.4, mix: 0.3 },
+      reverb: { active: true, decay: 2.2, mix: 0.35 }
     }
   },
   {
@@ -343,11 +354,12 @@ const PROG_DB = [
     drumPattern: "funk",
     bassPattern: "melodic",
     currentInst: "guitar_electric_clean",
+    fxPresetId: "cozy_lounge",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: true, rate: 1.0, depth: 0.4, mix: 0.4 },
-      delay: { active: false },
-      reverb: { active: true, decay: 2.0, mix: 0.25 }
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 1.4, depth: 0.3, mix: 0.28 },
+      delay: { active: false, time: 0.35, feedback: 0.3, mix: 0.25 },
+      reverb: { active: true, decay: 1.4, mix: 0.26 }
     }
   },
   {
@@ -375,11 +387,12 @@ const PROG_DB = [
     drumPattern: "rock",
     bassPattern: "root",
     currentInst: "guitar_electric_dist",
+    fxPresetId: "heavy_lead",
     pedalboard: {
-      overdrive: { active: true, drive: 0.85, tone: 0.5, volume: 0.75 },
-      chorus: { active: false },
-      delay: { active: false },
-      reverb: { active: true, decay: 1.2, mix: 0.2 }
+      overdrive: { active: true, drive: 0.88, tone: 0.7, volume: 0.9 },
+      chorus: { active: true, rate: 1.6, depth: 0.25, mix: 0.32 },
+      delay: { active: true, time: 0.32, feedback: 0.42, mix: 0.38 },
+      reverb: { active: true, decay: 2.6, mix: 0.44 }
     }
   },
   {
@@ -403,11 +416,12 @@ const PROG_DB = [
     drumPattern: "latin",
     bassPattern: "root",
     currentInst: "guitar_acoustic",
+    fxPresetId: "surf_spring",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: false },
-      delay: { active: true, time: 0.38, feedback: 0.4, mix: 0.3 },
-      reverb: { active: true, decay: 2.2, mix: 0.25 }
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 2.4, depth: 0.18, mix: 0.25 },
+      delay: { active: true, time: 0.22, feedback: 0.32, mix: 0.4 },
+      reverb: { active: true, decay: 2.8, mix: 0.52 }
     }
   },
   {
@@ -427,11 +441,12 @@ const PROG_DB = [
     drumPattern: "standard",
     bassPattern: "root",
     currentInst: "guitar_acoustic",
+    fxPresetId: "cozy_lounge",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: true, rate: 1.2, depth: 0.25, mix: 0.25 },
-      delay: { active: false },
-      reverb: { active: true, decay: 1.8, mix: 0.2 }
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 1.4, depth: 0.3, mix: 0.28 },
+      delay: { active: false, time: 0.35, feedback: 0.3, mix: 0.25 },
+      reverb: { active: true, decay: 1.4, mix: 0.26 }
     }
   },
   {
@@ -451,11 +466,12 @@ const PROG_DB = [
     drumPattern: "rock",
     bassPattern: "root",
     currentInst: "guitar_electric_clean",
+    fxPresetId: "dream_space",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: false },
-      delay: { active: false },
-      reverb: { active: true, decay: 2.8, mix: 0.3 }
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 1.2, depth: 0.6, mix: 0.55 },
+      delay: { active: true, time: 0.52, feedback: 0.55, mix: 0.5 },
+      reverb: { active: true, decay: 3.5, mix: 0.48 }
     }
   },
   {
@@ -475,11 +491,12 @@ const PROG_DB = [
     drumPattern: "rock",
     bassPattern: "octave",
     currentInst: "guitar_electric_dist",
+    fxPresetId: "heavy_lead",
     pedalboard: {
-      overdrive: { active: true, drive: 0.9, tone: 0.6, volume: 0.7 },
-      chorus: { active: false },
-      delay: { active: false },
-      reverb: { active: true, decay: 1.5, mix: 0.25 }
+      overdrive: { active: true, drive: 0.88, tone: 0.7, volume: 0.9 },
+      chorus: { active: true, rate: 1.6, depth: 0.25, mix: 0.32 },
+      delay: { active: true, time: 0.32, feedback: 0.42, mix: 0.38 },
+      reverb: { active: true, decay: 2.6, mix: 0.44 }
     }
   },
   {
@@ -499,11 +516,12 @@ const PROG_DB = [
     drumPattern: "rock",
     bassPattern: "syncopated",
     currentInst: "guitar_electric_clean",
+    fxPresetId: "heavy_lead",
     pedalboard: {
-      overdrive: { active: true, drive: 0.5, tone: 0.7, volume: 0.7 },
-      chorus: { active: false },
-      delay: { active: true, time: 0.35, feedback: 0.35, mix: 0.35 },
-      reverb: { active: true, decay: 2.0, mix: 0.25 }
+      overdrive: { active: true, drive: 0.88, tone: 0.7, volume: 0.9 },
+      chorus: { active: true, rate: 1.6, depth: 0.25, mix: 0.32 },
+      delay: { active: true, time: 0.32, feedback: 0.42, mix: 0.38 },
+      reverb: { active: true, decay: 2.6, mix: 0.44 }
     }
   },
   {
@@ -523,11 +541,12 @@ const PROG_DB = [
     drumPattern: "funk",
     bassPattern: "octave",
     currentInst: "guitar_electric_clean",
+    fxPresetId: "cozy_lounge",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: true, rate: 2.2, depth: 0.3, mix: 0.35 },
-      delay: { active: false },
-      reverb: { active: true, decay: 1.5, mix: 0.2 }
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 1.4, depth: 0.3, mix: 0.28 },
+      delay: { active: false, time: 0.35, feedback: 0.3, mix: 0.25 },
+      reverb: { active: true, decay: 1.4, mix: 0.26 }
     }
   },
   {
@@ -547,11 +566,12 @@ const PROG_DB = [
     drumPattern: "standard",
     bassPattern: "syncopated",
     currentInst: "piano",
+    fxPresetId: "dream_space",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: false },
-      delay: { active: true, time: 0.38, feedback: 0.45, mix: 0.4 },
-      reverb: { active: true, decay: 2.5, mix: 0.3 }
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 1.2, depth: 0.6, mix: 0.55 },
+      delay: { active: true, time: 0.52, feedback: 0.55, mix: 0.5 },
+      reverb: { active: true, decay: 3.5, mix: 0.48 }
     }
   },
   {
@@ -571,11 +591,12 @@ const PROG_DB = [
     drumPattern: "standard",
     bassPattern: "root",
     currentInst: "guitar_acoustic",
+    fxPresetId: "surf_spring",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: false },
-      delay: { active: false },
-      reverb: { active: true, decay: 2.8, mix: 0.35 }
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 2.4, depth: 0.18, mix: 0.25 },
+      delay: { active: true, time: 0.22, feedback: 0.32, mix: 0.4 },
+      reverb: { active: true, decay: 2.8, mix: 0.52 }
     }
   },
   {
@@ -594,11 +615,12 @@ const PROG_DB = [
     drumPattern: "rock",
     bassPattern: "walk",
     currentInst: "guitar_electric_clean",
+    fxPresetId: "crunchy",
     pedalboard: {
-      overdrive: { active: true, drive: 0.15, tone: 0.5, volume: 0.7 },
-      chorus: { active: true, rate: 1.0, depth: 0.35, mix: 0.3 },
-      delay: { active: false },
-      reverb: { active: true, decay: 1.8, mix: 0.25 }
+      overdrive: { active: true, drive: 0.52, tone: 0.6, volume: 0.8 },
+      chorus: { active: false, rate: 1.5, depth: 0.35, mix: 0.4 },
+      delay: { active: false, time: 0.38, feedback: 0.45, mix: 0.4 },
+      reverb: { active: true, decay: 1.8, mix: 0.22 }
     }
   },
   {
@@ -618,11 +640,12 @@ const PROG_DB = [
     drumPattern: "funk",
     bassPattern: "octave",
     currentInst: "synth",
+    fxPresetId: "psychedelic",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: true, rate: 1.8, depth: 0.45, mix: 0.4 },
-      delay: { active: true, time: 0.33, feedback: 0.3, mix: 0.25 },
-      reverb: { active: true, decay: 1.8, mix: 0.25 }
+      overdrive: { active: true, drive: 0.35, tone: 0.5, volume: 0.75 },
+      chorus: { active: true, rate: 4.2, depth: 0.75, mix: 0.65 },
+      delay: { active: false, time: 0.3, feedback: 0.4, mix: 0.3 },
+      reverb: { active: true, decay: 2.2, mix: 0.35 }
     }
   },
   {
@@ -642,11 +665,12 @@ const PROG_DB = [
     drumPattern: "standard",
     bassPattern: "root",
     currentInst: "guitar_electric_clean",
+    fxPresetId: "dream_space",
     pedalboard: {
-      overdrive: { active: false },
-      chorus: { active: true, rate: 1.5, depth: 0.7, mix: 0.65 },
-      delay: { active: true, time: 0.42, feedback: 0.5, mix: 0.4 },
-      reverb: { active: true, decay: 3.5, mix: 0.4 }
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 1.2, depth: 0.6, mix: 0.55 },
+      delay: { active: true, time: 0.52, feedback: 0.55, mix: 0.5 },
+      reverb: { active: true, decay: 3.5, mix: 0.48 }
     }
   },
   {
@@ -666,11 +690,12 @@ const PROG_DB = [
     drumPattern: "rock",
     bassPattern: "octave",
     currentInst: "guitar_electric_dist",
+    fxPresetId: "heavy_lead",
     pedalboard: {
-      overdrive: { active: true, drive: 0.95, tone: 0.65, volume: 0.75 },
-      chorus: { active: false },
-      delay: { active: true, time: 0.28, feedback: 0.2, mix: 0.2 },
-      reverb: { active: true, decay: 1.5, mix: 0.25 }
+      overdrive: { active: true, drive: 0.88, tone: 0.7, volume: 0.9 },
+      chorus: { active: true, rate: 1.6, depth: 0.25, mix: 0.32 },
+      delay: { active: true, time: 0.32, feedback: 0.42, mix: 0.38 },
+      reverb: { active: true, decay: 2.6, mix: 0.44 }
     }
   }
 ];
@@ -718,9 +743,9 @@ const FX_PRESETS = [
   },
   {
     id: "crunchy",
-    name: "Warm Crunch",
+    name: "Warm Tube Crunch",
     icon: "🔥",
-    desc: "Feine Röhrensättigung",
+    desc: "Warme Röhrenkompression & milder Overdrive",
     settings: {
       overdrive: { active: true, drive: 0.52, tone: 0.6, volume: 0.8 },
       chorus: { active: false, rate: 1.5, depth: 0.35, mix: 0.4 },
@@ -730,38 +755,74 @@ const FX_PRESETS = [
   },
   {
     id: "heavy_lead",
-    name: "Heavy Metal",
-    icon: "🤘",
-    desc: "Satt verzerrtes Brett",
+    name: "High-Gain Arena",
+    icon: "🎸",
+    desc: "Satter Lead-Overdrive für röhrende Soli",
     settings: {
-      overdrive: { active: true, drive: 0.95, tone: 0.75, volume: 0.95 },
-      chorus: { active: true, rate: 1.8, depth: 0.3, mix: 0.45 },
-      delay: { active: true, time: 0.32, feedback: 0.4, mix: 0.35 },
-      reverb: { active: true, decay: 2.2, mix: 0.42 }
+      overdrive: { active: true, drive: 0.88, tone: 0.7, volume: 0.9 },
+      chorus: { active: true, rate: 1.6, depth: 0.25, mix: 0.32 },
+      delay: { active: true, time: 0.32, feedback: 0.42, mix: 0.38 },
+      reverb: { active: true, decay: 2.6, mix: 0.44 }
     }
   },
   {
     id: "dream_space",
-    name: "Dreamy Echo",
+    name: "Dreamy Echo Wave",
     icon: "🌌",
-    desc: "Sphärischer Chorus-Delay",
+    desc: "Sphärischer Modulations-Hall mit weitem Delay",
     settings: {
       overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
-      chorus: { active: true, rate: 1.4, depth: 0.65, mix: 0.6 },
-      delay: { active: true, time: 0.55, feedback: 0.6, mix: 0.55 },
-      reverb: { active: true, decay: 3.8, mix: 0.52 }
+      chorus: { active: true, rate: 1.2, depth: 0.6, mix: 0.55 },
+      delay: { active: true, time: 0.52, feedback: 0.55, mix: 0.5 },
+      reverb: { active: true, decay: 3.5, mix: 0.48 }
     }
   },
   {
-    id: "ambient_surf",
-    name: "Surf Spring Room",
+    id: "surf_spring",
+    name: "Surf Spring Splash",
     icon: "🌊",
-    desc: "Surf Delay & Reverb",
+    desc: "Nasser Retro-Federhall mit Slapback-Echo",
     settings: {
       overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
-      chorus: { active: true, rate: 2.5, depth: 0.18, mix: 0.25 },
-      delay: { active: true, time: 0.24, feedback: 0.35, mix: 0.4 },
-      reverb: { active: true, decay: 2.8, mix: 0.5 }
+      chorus: { active: true, rate: 2.4, depth: 0.18, mix: 0.25 },
+      delay: { active: true, time: 0.22, feedback: 0.32, mix: 0.4 },
+      reverb: { active: true, decay: 2.8, mix: 0.52 }
+    }
+  },
+  {
+    id: "psychedelic",
+    name: "Psychedelic Rotary",
+    icon: "🌀",
+    desc: "Schwebender Leslie-Modulations-Effekt",
+    settings: {
+      overdrive: { active: true, drive: 0.35, tone: 0.5, volume: 0.75 },
+      chorus: { active: true, rate: 4.2, depth: 0.75, mix: 0.65 },
+      delay: { active: false, time: 0.3, feedback: 0.4, mix: 0.3 },
+      reverb: { active: true, decay: 2.2, mix: 0.35 }
+    }
+  },
+  {
+    id: "cosmic_clouds",
+    name: "Cosmic Starry Sky",
+    icon: "☄️",
+    desc: "Unendliche Weiten durch maximale Raumtiefe",
+    settings: {
+      overdrive: { active: false, drive: 0.4, tone: 0.5, volume: 0.7 },
+      chorus: { active: true, rate: 0.8, depth: 0.5, mix: 0.45 },
+      delay: { active: true, time: 0.72, feedback: 0.75, mix: 0.58 },
+      reverb: { active: true, decay: 5.2, mix: 0.62 }
+    }
+  },
+  {
+    id: "cozy_lounge",
+    name: "Cozy Ambient Room",
+    icon: "🏡",
+    desc: "Intimes Club-Ambiente mit feiner Chorusharmonie",
+    settings: {
+      overdrive: { active: false, drive: 0.45, tone: 0.55, volume: 0.7 },
+      chorus: { active: true, rate: 1.4, depth: 0.3, mix: 0.28 },
+      delay: { active: false, time: 0.35, feedback: 0.3, mix: 0.25 },
+      reverb: { active: true, decay: 1.4, mix: 0.26 }
     }
   }
 ];
@@ -843,6 +904,8 @@ export default function App() {
   const [infoModalOpen, setInfoModalOpen] = useState<boolean>(false);
   const [whatsAppImportModalOpen, setWhatsAppImportModalOpen] = useState<boolean>(false);
   const [whatsAppImportText, setWhatsAppImportText] = useState<string>("");
+  const [whatsAppWarningModalOpen, setWhatsAppWarningModalOpen] = useState<boolean>(false);
+  const [whatsAppWarningReason, setWhatsAppWarningReason] = useState<"length" | "recordings" | "both">("length");
   const [whatsAppSongTitle, setWhatsAppSongTitle] = useState<string>("Mein Jam-Preset");
   const [toastMsg, setToastMsg] = useState<string>("");
   const [isFooterMinimized, setIsFooterMinimized] = useState<boolean>(false);
@@ -1052,15 +1115,37 @@ export default function App() {
 
   const applyFxPreset = (presetId: string) => {
     const selected = FX_PRESETS.find(p => p.id === presetId);
-    if (selected) {
-      initAudio();
+    if (!selected) return;
+
+    // Check if the selected preset settings match the current pedalboard active states perfectly
+    const isCurrent = (
+      pedalboard.overdrive.active === selected.settings.overdrive.active &&
+      pedalboard.chorus.active === selected.settings.chorus.active &&
+      pedalboard.delay.active === selected.settings.delay.active &&
+      pedalboard.reverb.active === selected.settings.reverb.active
+    );
+
+    initAudio();
+    if (isCurrent && presetId !== "bypass") {
+      // Toggle off to dry bypass
+      const bypass = FX_PRESETS.find(p => p.id === "bypass");
+      if (bypass) {
+        setPedalboard({
+          overdrive: { ...bypass.settings.overdrive },
+          chorus: { ...bypass.settings.chorus },
+          delay: { ...bypass.settings.delay },
+          reverb: { ...bypass.settings.reverb }
+        });
+        showToast("⚡ Bypass: FX-Rigs komplett getrennt");
+      }
+    } else {
       setPedalboard({
         overdrive: { ...selected.settings.overdrive },
         chorus: { ...selected.settings.chorus },
         delay: { ...selected.settings.delay },
         reverb: { ...selected.settings.reverb }
       });
-      showToast(`⚡ Rig geladen: ${selected.name}`);
+      showToast(presetId === "bypass" ? "⚡ Bypass: FX-Rigs komplett getrennt" : `⚡ Rig geladen: ${selected.name}`);
     }
   };
 
@@ -2664,7 +2749,30 @@ export default function App() {
       showToast("Die Timeline ist leer");
       return;
     }
-    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+    
+    const currentTimeline = timelineRef.current;
+    const hasRecordings = currentTimeline.some(item => item.type === "recording");
+    const isTooLong = text.length > 2000;
+
+    if (isTooLong || hasRecordings) {
+      if (isTooLong && hasRecordings) {
+        setWhatsAppWarningReason("both");
+      } else if (hasRecordings) {
+        setWhatsAppWarningReason("recordings");
+      } else {
+        setWhatsAppWarningReason("length");
+      }
+      setWhatsAppWarningModalOpen(true);
+      
+      // Auto-copy to clipboard as safe backup
+      navigator.clipboard.writeText(text)
+        .then(() => {
+          showToast("Akkord-Code wurde in die Zwischenablage kopiert! 📋");
+        })
+        .catch(() => {});
+    } else {
+      window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+    }
   };
 
   const importFromWhatsApp = (text: string) => {
@@ -2896,7 +3004,24 @@ export default function App() {
     if (p.currentInst) {
       setCurrentInst(p.currentInst);
     }
-    if (p.pedalboard) {
+    if (p.fxPresetId) {
+      const selected = FX_PRESETS.find((x) => x.id === p.fxPresetId);
+      if (selected) {
+        setPedalboard({
+          overdrive: { ...selected.settings.overdrive },
+          chorus: { ...selected.settings.chorus },
+          delay: { ...selected.settings.delay },
+          reverb: { ...selected.settings.reverb }
+        });
+      } else if (p.pedalboard) {
+        setPedalboard({
+          overdrive: { ...pedalboard.overdrive, ...p.pedalboard.overdrive, active: p.pedalboard.overdrive?.active ?? false },
+          chorus: { ...pedalboard.chorus, ...p.pedalboard.chorus, active: p.pedalboard.chorus?.active ?? false },
+          delay: { ...pedalboard.delay, ...p.pedalboard.delay, active: p.pedalboard.delay?.active ?? false },
+          reverb: { ...pedalboard.reverb, ...p.pedalboard.reverb, active: p.pedalboard.reverb?.active ?? false }
+        });
+      }
+    } else if (p.pedalboard) {
       setPedalboard({
         overdrive: { ...pedalboard.overdrive, ...p.pedalboard.overdrive, active: p.pedalboard.overdrive?.active ?? false },
         chorus: { ...pedalboard.chorus, ...p.pedalboard.chorus, active: p.pedalboard.chorus?.active ?? false },
@@ -2907,7 +3032,9 @@ export default function App() {
 
     setTab("songwriter");
     const styleLabel = p.strumPattern === "strum" ? "Zupfen" : p.strumPattern === "arpeggio" ? "Arpeggio" : "Block";
-    const extraInfo = p.bpm ? ` (${p.bpm} BPM, ${styleLabel})` : "";
+    const presetObj = p.fxPresetId ? FX_PRESETS.find((x) => x.id === p.fxPresetId) : null;
+    const fxLabel = presetObj ? `, FX: ${presetObj.name}` : "";
+    const extraInfo = p.bpm ? ` (${p.bpm} BPM, ${styleLabel}${fxLabel})` : "";
     showToast(`${p.name} geladen!${extraInfo}`);
   };
 
@@ -3687,16 +3814,27 @@ export default function App() {
                           )}
                         </div>
 
-                        {/* Preset Pedalboard FX active lights */}
-                        {p.pedalboard && (
-                          <div className="flex flex-wrap items-center gap-2 mb-3 text-[10px] text-[#7a6a58] bg-[#120a05] px-2 py-1 rounded-lg border border-[#4a3828]/40 w-fit">
-                            <span className="font-semibold text-[#8a7a68]">Presets:</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[9px] flex items-center gap-0.5 ${p.pedalboard.overdrive?.active ? 'text-[#e85c33] bg-[#e85c33]/15 font-bold border border-[#e85c33]/20' : 'opacity-25'}`}>⚡ OD</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[9px] flex items-center gap-0.5 ${p.pedalboard.chorus?.active ? 'text-[#3393e8] bg-[#3393e8]/15 font-bold border border-[#3393e8]/20' : 'opacity-25'}`}>🌀 Cho</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[9px] flex items-center gap-0.5 ${p.pedalboard.delay?.active ? 'text-[#33e8a3] bg-[#33e8a3]/15 font-bold border border-[#33e8a3]/20' : 'opacity-25'}`}>⏳ Dly</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[9px] flex items-center gap-0.5 ${p.pedalboard.reverb?.active ? 'text-[#a333e8] bg-[#a333e8]/15 font-bold border border-[#a333e8]/20' : 'opacity-25'}`}>🌌 Rev</span>
-                          </div>
-                        )}
+                        {/* Preset Pedalboard FX active lights with FX Preset Name */}
+                        {p.pedalboard && (() => {
+                          const fxPreset = p.fxPresetId ? FX_PRESETS.find((x) => x.id === p.fxPresetId) : null;
+                          return (
+                            <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                              {fxPreset && (
+                                <div className="flex items-center gap-1.5 bg-[#120a05] text-[10px] text-[#c8b8a4] px-2.5 py-1 rounded-lg border border-[#4a3828]/40 font-mono font-bold whitespace-nowrap">
+                                  <span className="text-[#a89880]">Sound:</span>
+                                  <span>{fxPreset.icon}</span>
+                                  <span className="text-[#d4943c] truncate max-w-[150px]">{fxPreset.name}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-1 bg-[#120a05] px-2 py-1 rounded-lg border border-[#4a3828]/40">
+                                <span className={`px-1 py-0.5 rounded text-[9px] flex items-center gap-0.5 ${p.pedalboard.overdrive?.active ? 'text-[#e85c33] bg-[#e85c33]/15 font-bold border border-[#e85c33]/20' : 'opacity-25'}`}>⚡ OD</span>
+                                <span className={`px-1 py-0.5 rounded text-[9px] flex items-center gap-0.5 ${p.pedalboard.chorus?.active ? 'text-[#3393e8] bg-[#3393e8]/15 font-bold border border-[#3393e8]/20' : 'opacity-25'}`}>🌀 Cho</span>
+                                <span className={`px-1 py-0.5 rounded text-[9px] flex items-center gap-0.5 ${p.pedalboard.delay?.active ? 'text-[#33e8a3] bg-[#33e8a3]/15 font-bold border border-[#33e8a3]/20' : 'opacity-25'}`}>⏳ Dly</span>
+                                <span className={`px-1 py-0.5 rounded text-[9px] flex items-center gap-0.5 ${p.pedalboard.reverb?.active ? 'text-[#a333e8] bg-[#a333e8]/15 font-bold border border-[#a333e8]/20' : 'opacity-25'}`}>🌌 Rev</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
 
                         <p className="text-xs text-[#7a6a58] leading-relaxed mb-3">
                           {p.desc}
@@ -4472,6 +4610,14 @@ export default function App() {
                             >
                               Anhören
                             </button>
+                            <a
+                              href={rec.url}
+                              download={`${rec.name.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.webm`}
+                              className="px-2.5 py-1 text-[10px] font-bold bg-[#4a9e5c]/15 border border-[#4a9e5c]/30 text-[#6fc888] hover:bg-[#4a9e5c] hover:text-white rounded transition-all cursor-pointer flex items-center gap-1 text-center no-underline"
+                              title="Diese Tonaufnahme als Datei herunterladen, um sie per WhatsApp zu versenden"
+                            >
+                              <Download size={11} /> Herunterladen
+                            </a>
                             <button
                               onClick={() => addRecordingToTimeline(rec)}
                               title="An Timeline anfügen"
@@ -4911,7 +5057,13 @@ export default function App() {
                       <button
                         onClick={() => {
                           initAudio();
-                          setDrumsOn(!drumsOn);
+                          const nextOn = !drumsOn;
+                          setDrumsOn(nextOn);
+                          if (nextOn) {
+                            setDrumsExpanded(true);
+                            setBassExpanded(true);
+                            setDspExpanded(true);
+                          }
                         }}
                         className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer relative flex items-center shrink-0 ${
                           drumsOn ? "bg-[#4a9e5c]" : "bg-[#120a04] border border-[#4a3828]/60"
@@ -4935,7 +5087,12 @@ export default function App() {
 
                     {/* Quick Expand Slider Button */}
                     <button
-                      onClick={() => setDrumsExpanded(!drumsExpanded)}
+                      onClick={() => {
+                        const target = !drumsExpanded;
+                        setDrumsExpanded(target);
+                        setBassExpanded(target);
+                        setDspExpanded(target);
+                      }}
                       className={`p-1 rounded-lg bg-[#120a04] hover:bg-[#22160d] border border-[#4a3828]/50 flex items-center justify-center transition-all cursor-pointer text-xs select-none ${
                         drumsExpanded ? "text-[#d4943c] border-[#d4943c]/70" : "text-[#7a6a58]"
                       }`}
@@ -5029,7 +5186,13 @@ export default function App() {
                       <button
                         onClick={() => {
                           initAudio();
-                          setBasslineOn(!basslineOn);
+                          const nextOn = !basslineOn;
+                          setBasslineOn(nextOn);
+                          if (nextOn) {
+                            setDrumsExpanded(true);
+                            setBassExpanded(true);
+                            setDspExpanded(true);
+                          }
                         }}
                         className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer relative flex items-center shrink-0 ${
                           basslineOn ? "bg-[#4a9e5c]" : "bg-[#120a04] border border-[#4a3828]/60"
@@ -5053,7 +5216,12 @@ export default function App() {
 
                     {/* Quick Expand Slider Button */}
                     <button
-                      onClick={() => setBassExpanded(!bassExpanded)}
+                      onClick={() => {
+                        const target = !bassExpanded;
+                        setDrumsExpanded(target);
+                        setBassExpanded(target);
+                        setDspExpanded(target);
+                      }}
                       className={`p-1 rounded-lg bg-[#120a04] hover:bg-[#22160d] border border-[#4a3828]/50 flex items-center justify-center transition-all cursor-pointer text-xs select-none ${
                         bassExpanded ? "text-[#d4943c] border-[#d4943c]/70" : "text-[#7a6a58]"
                       }`}
@@ -5160,7 +5328,12 @@ export default function App() {
 
                     {/* Quick Expand Slider Button */}
                     <button
-                      onClick={() => setDspExpanded(!dspExpanded)}
+                      onClick={() => {
+                        const target = !dspExpanded;
+                        setDrumsExpanded(target);
+                        setBassExpanded(target);
+                        setDspExpanded(target);
+                      }}
                       className={`p-1 rounded-lg bg-[#120a04] hover:bg-[#22160d] border border-[#4a3828]/50 flex items-center justify-center transition-all cursor-pointer text-xs select-none ${
                         dspExpanded ? "text-[#d4943c] border-[#d4943c]/70" : "text-[#7a6a58]"
                       }`}
@@ -5226,12 +5399,7 @@ export default function App() {
                       {/* Rig selection inside channel strip */}
                       <div className="flex bg-[#120a04] p-0.5 rounded-lg border border-[#4a3828]/40 select-none overflow-x-auto scrollbar-none relative gap-0.5 items-center">
                         <span className="text-[8px] font-mono text-[#5f4e3c] px-1 sm:px-1.5 font-bold uppercase shrink-0">Rig:</span>
-                        {FX_PRESETS.reduce<any[]>((acc, cur) => {
-                          if (cur.id !== "heavy_lead") {
-                            acc.push(cur);
-                          }
-                          return acc;
-                        }, []).map((p: any) => {
+                        {FX_PRESETS.map((p: any) => {
                           const isCurrent = (
                             pedalboard.overdrive.active === p.settings.overdrive.active &&
                             pedalboard.chorus.active === p.settings.chorus.active &&
@@ -5253,7 +5421,7 @@ export default function App() {
                                   transition={{ type: "spring", stiffness: 400, damping: 35 }}
                                 />
                               )}
-                              <span>{p.icon} {p.name.replace("Dry ", "").replace("Surf ", "")}</span>
+                              <span>{p.icon} {p.name.replace("Dry ", "").replace("Warm ", "").replace("High-Gain ", "")}</span>
                             </button>
                           );
                         })}
@@ -5715,6 +5883,107 @@ export default function App() {
                     className="px-5 py-2 text-xs font-black uppercase rounded-lg bg-[#4a9e5c] hover:bg-green-600 text-white shadow-[0_4px_12px_rgba(74,158,92,0.35)] transition-all flex items-center gap-1.5 border-none cursor-pointer"
                   >
                     🚀 Laden & Einspielen
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* WhatsApp Warning Modal (Length / Recordings) */}
+      <AnimatePresence>
+        {whatsAppWarningModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setWhatsAppWarningModalOpen(false)}
+            className="fixed inset-0 bg-black/85 z-55 flex items-center justify-center p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#2a1e10] border-2 border-[#4a3828] p-6 rounded-2xl max-w-lg w-full text-sm leading-relaxed shadow-[0_25px_60px_rgba(0,0,0,0.9)] text-left"
+            >
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#4a3828]/40">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">⚠️</span>
+                  <h2 className="text-lg font-serif text-[#d4943c] font-black">
+                    Teilen-Hinweis (WhatsApp & Audio)
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setWhatsAppWarningModalOpen(false)}
+                  className="p-1 text-[#7a6a58] hover:text-[#f0e0cc] transition-colors border-none bg-transparent cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-4 text-[#f0e0cc]">
+                {whatsAppWarningReason === "length" && (
+                  <div className="space-y-3">
+                    <p className="font-bold text-[#e5a952]">Dein Song ist sehr lang!</p>
+                    <p className="text-xs text-[#a89880] leading-relaxed">
+                      Weil das Arrangement sehr viele Takte/Akkorde enthält, übersteigt der Code das Zeichenlimit für WhatsApp-Links (~2000 Zeichen). Eine automatische Weiterleitung würde vom Browser oder WhatsApp abgeschnitten werden, was zu einem fehlerhaften Import führt.
+                    </p>
+                    <div className="p-3 bg-[#120a04] border border-[#e5a952]/20 rounded-xl text-xs space-y-2">
+                      <p className="font-extrabold text-[#4a9e5c] flex items-center gap-1.5">
+                        <span>✅</span> Automatisch kopiert!
+                      </p>
+                      <p className="text-[#a89880] leading-normal font-mono">
+                        Der vollständige unbeschädigte Code wurde bereits in deine <strong>Zwischenablage kopiert</strong>. Du musst ihn nur noch im WhatsApp-Chat an deinen Kumpel einfügen (<strong>Strg+V</strong> bzw. <strong>Gedrückt halten → Einfügen</strong>) und abschicken!
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {whatsAppWarningReason === "recordings" && (
+                  <div className="space-y-3">
+                    <p className="font-bold text-[#e5a952]">Aufnahme im Arrangement gefunden!</p>
+                    <p className="text-xs text-[#a89880] leading-relaxed">
+                      Dein Arrangement enthält Tonaufnahmen (Mikrofon/Gesang/Gitarre). Roh-Audiodateien sind viel zu groß, um in einem Text-Code per WhatsApp übertragen zu werden. Der Code überträgt nur die Takte und Settings, die Soundclips spielen beim Empfänger stumm ab.
+                    </p>
+                    <div className="p-3 bg-[#120a04] border border-[#e5a952]/20 rounded-xl text-xs space-y-2">
+                      <p className="font-extrabold text-[#4a9e5c] flex items-center gap-1.5">
+                        <span>🎙️</span> Sound-Export Anleitung:
+                      </p>
+                      <ol className="list-decimal list-inside text-[#a5957e] space-y-1.5 leading-normal">
+                        <li>Füge den kopierten Code im Chat ein, um Rhythmus gänzlich zu übertragen.</li>
+                        <li>Gehe in der App in den Tab <strong>&quot;Aufnahme&quot;</strong>.</li>
+                        <li>Klicke bei deinen Aufnahmen auf <strong>&quot;Herunterladen&quot;</strong>.</li>
+                        <li>Sende diese heruntergeladene Audiodatei zusätzlich über WhatsApp mit!</li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
+
+                {whatsAppWarningReason === "both" && (
+                  <div className="space-y-3">
+                    <p className="font-bold text-[#e5a952]">Sehr langer Song & Aufnahmen vorhanden!</p>
+                    <p className="text-xs text-[#a89880] leading-relaxed">
+                      Dieses Arrangement ist sehr lang und enthält zudem eigene Tonaufnahmen (Mikrofon/Vocals). WhatsApp-Weiterleitungs-URLs sind dafür zu kurz, und die rohen Audiodateien können nicht im Text eingebettet werden.
+                    </p>
+                    <div className="p-3 bg-[#120a04] border border-[#e5a952]/20 rounded-xl text-xs space-y-2">
+                      <p className="font-bold text-[#4a9e5c] mb-1">Was musst du tun?</p>
+                      <ul className="list-disc list-inside text-[#a5957e] space-y-1 text-left leading-normal">
+                        <li>Der Code wurde bereits <strong>in deine Zwischenablage kopiert!</strong></li>
+                        <li>Füge den Code manuell im Chat ein und sende ihn.</li>
+                        <li>Lade deine Aufnahmen im Tab <strong>&quot;Aufnahme&quot;</strong> herunter und sende sie als separate Audiodatei.</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-3 border-t border-[#4a3828]/40">
+                  <button
+                    onClick={() => setWhatsAppWarningModalOpen(false)}
+                    className="px-6 py-2 bg-[#d4943c] hover:bg-[#ebd083] text-[#1a1008] font-mono uppercase text-xs font-black rounded-xl border-none cursor-pointer tracking-wider"
+                  >
+                    Verstanden! 👍
                   </button>
                 </div>
               </div>
