@@ -694,7 +694,12 @@ const BASS_OPTIONS = [
 const STRUM_OPTIONS = [
   { id: "block", label: "Block", icon: "🎹" },
   { id: "arpeggio", label: "Arp", icon: "✨" },
-  { id: "strum", label: "Zupfen", icon: "🪕" }
+  { id: "strum", label: "Zupfen", icon: "🪕" },
+  { id: "balkan_7_8", label: "7/8 Balkan (3-2-2)", icon: "🔥" },
+  { id: "balkan_9_8", label: "9/8 Balkan (2-2-2-3)", icon: "🌟" },
+  { id: "reggae", label: "Reggae", icon: "🌴" },
+  { id: "rumba", label: "Rumba/Pop", icon: "💃" },
+  { id: "waltz", label: "3/4 Walzer", icon: "🩰" }
 ];
 
 const FX_PRESETS = [
@@ -822,10 +827,11 @@ export default function App() {
   const [playIdx, setPlayIdx] = useState<number>(-1);
   const [bpm, setBpm] = useState<number>(100);
   const [currentInst, setCurrentInst] = useState<string>("piano");
+  const [activeInstruments, setActiveInstruments] = useState<string[]>(["piano"]);
   const [drumsOn, setDrumsOn] = useState<boolean>(false);
   const [basslineOn, setBasslineOn] = useState<boolean>(false);
   const [beatsPerBar, setBeatsPerBar] = useState<3 | 4>(4);
-  const [strumPattern, setStrumPattern] = useState<"block" | "arpeggio" | "strum">("block");
+  const [strumPattern, setStrumPattern] = useState<string>("block");
   const [drumPattern, setDrumPattern] = useState<string>("standard");
   const [bassPattern, setBassPattern] = useState<string>("root");
   const [drumsVolume, setDrumsVolume] = useState<number>(0.65);
@@ -839,6 +845,9 @@ export default function App() {
   const [whatsAppSongTitle, setWhatsAppSongTitle] = useState<string>("Mein Jam-Preset");
   const [toastMsg, setToastMsg] = useState<string>("");
   const [isFooterMinimized, setIsFooterMinimized] = useState<boolean>(false);
+  const [drumsExpanded, setDrumsExpanded] = useState<boolean>(false);
+  const [bassExpanded, setBassExpanded] = useState<boolean>(false);
+  const [dspExpanded, setDspExpanded] = useState<boolean>(false);
   const [expandedSection, setExpandedSection] = useState<"navigation" | "sequencer" | "instruments" | "style" | "trash" | null>("navigation");
   
   // Custom Songwriter & LocalStorage States
@@ -1006,6 +1015,22 @@ export default function App() {
     timelineRef.current = timeline;
   }, [timeline]);
 
+  const activeInstrumentsRef = useRef<string[]>(["piano"]);
+  const currentInstRef = useRef<string>("piano");
+  const strumPatternRef = useRef<string>("block");
+  const bpmRef = useRef<number>(100);
+  const drumsOnRef = useRef<boolean>(false);
+  const basslineOnRef = useRef<boolean>(false);
+  const beatsPerBarRef = useRef<number>(4);
+
+  useEffect(() => { activeInstrumentsRef.current = activeInstruments; }, [activeInstruments]);
+  useEffect(() => { currentInstRef.current = currentInst; }, [currentInst]);
+  useEffect(() => { strumPatternRef.current = strumPattern; }, [strumPattern]);
+  useEffect(() => { bpmRef.current = bpm; }, [bpm]);
+  useEffect(() => { drumsOnRef.current = drumsOn; }, [drumsOn]);
+  useEffect(() => { basslineOnRef.current = basslineOn; }, [basslineOn]);
+  useEffect(() => { beatsPerBarRef.current = beatsPerBar; }, [beatsPerBar]);
+
   // Clean playTimeout and recording intervals on unmount
   useEffect(() => {
     return () => {
@@ -1142,7 +1167,17 @@ export default function App() {
     const finalOut = ctx.createGain();
     revDry.connect(finalOut);
     revWet.connect(finalOut);
-    finalOut.connect(ctx.destination);
+
+    // Dynamic Limiter/Compressor to stop clipping distortion when all play at the same time
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.setValueAtTime(-2, ctx.currentTime); // begin compressing just under 0dB
+    limiter.knee.setValueAtTime(8, ctx.currentTime);
+    limiter.ratio.setValueAtTime(20, ctx.currentTime); // high ratio acts as rigid limiter
+    limiter.attack.setValueAtTime(0.003, ctx.currentTime); // fast attack to catch quick peaks
+    limiter.release.setValueAtTime(0.08, ctx.currentTime);
+
+    finalOut.connect(limiter);
+    limiter.connect(ctx.destination);
 
     // Store refs
     driveNodeRef.current = shaper;
@@ -1298,446 +1333,765 @@ export default function App() {
   const playChordInst = (s: number, q: "maj" | "min" | "dim", d: number, pat: string) => {
     initAudio();
     const ctx = audioContextRef.current;
-    const masterGain = masterGainRef.current;
-    if (!ctx || !masterGain) return;
+    const baseMasterGain = masterGainRef.current;
+    if (!ctx || !baseMasterGain) return;
 
-    if (currentInst === "guitar") {
-      const intervals = chordIntervals(q);
-      const baseFreq = 130.81;
-      if (pat === "arpeggio") {
-        const arp = [...intervals, 12];
-        arp.forEach((iv, ni) => {
-          const f = baseFreq * Math.pow(2, (s + iv) / 12);
-          const dl = ni * 0.12;
-          const t = ctx.currentTime + dl;
-          [0, 12].forEach((o) => {
-            const osc = ctx.createOscillator();
-            const g = ctx.createGain();
-            osc.type = ni === 0 ? "triangle" : "sawtooth";
-            osc.frequency.value = f * Math.pow(2, o / 12);
-            const v = 0.045 / (o === 0 ? 1 : 2);
-            g.gain.setValueAtTime(0, t);
-            g.gain.linearRampToValueAtTime(v, t + 0.006);
-            g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-            osc.connect(g);
-            g.connect(masterGain);
-            osc.start(t);
-            osc.stop(t + d + 0.05);
-          });
-        });
-      } else {
-        intervals.forEach((iv, ni) => {
-          [0, -12, 12].forEach((o, oi) => {
-            const f = baseFreq * Math.pow(2, (s + iv + o) / 12);
-            const dl = pat === "strum" ? ni * 0.04 + oi * 0.01 : 0;
-            const t = ctx.currentTime + dl;
-            const osc = ctx.createOscillator();
-            const g = ctx.createGain();
-            osc.type = ni === 0 ? "triangle" : "sawtooth";
-            osc.frequency.value = f;
-            const v = 0.055 / (oi + 1);
-            g.gain.setValueAtTime(0, t);
-            g.gain.linearRampToValueAtTime(v, t + 0.006);
-            g.gain.exponentialRampToValueAtTime(Math.max(v * 0.25, 0.0001), t + 0.45);
-            g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-            osc.connect(g);
-            g.connect(masterGain);
-            osc.start(t);
-            osc.stop(t + d + 0.05);
-          });
-        });
-      }
-    } else if (currentInst === "guitar_acoustic") {
-      const intervals = chordIntervals(q);
-      const baseFreq = 130.81;
-      intervals.forEach((iv, ni) => {
-        [0, 12, 24].forEach((o, oi) => {
-          const f = baseFreq * Math.pow(2, (s + iv + o) / 12);
-          const dl = pat === "strum" ? ni * 0.038 + oi * 0.008 : pat === "arpeggio" ? ni * 0.12 : 0;
-          const t = ctx.currentTime + dl;
+    // Read real-time synchronized instruments & tempo configs
+    const targetInstId = currentInstRef.current || currentInst;
+    const instrumentsToPlay = activeInstrumentsRef.current && activeInstrumentsRef.current.length > 0 
+      ? activeInstrumentsRef.current 
+      : [targetInstId];
+    
+    const N = instrumentsToPlay.length;
+    // Downscale gain factor proportionally to the number of active instruments to prevent clipping
+    const scaleFactor = 1.0 / Math.pow(N, 0.55);
+
+    const chordGain = ctx.createGain();
+    chordGain.gain.setValueAtTime(scaleFactor, ctx.currentTime);
+    chordGain.connect(baseMasterGain);
+
+    const masterGain = chordGain;
+    const activeBpm = bpmRef.current || bpm;
+    const activeBeatsPerBar = beatsPerBarRef.current || beatsPerBar;
+    const beatDur = 60 / activeBpm;
+
+    // Unified helper to play a single voice element for a specific instrument
+    const playChordNote = (semi: number, t: number, noteLength: number, vel: number, instId: string) => {
+      const f = 130.81 * Math.pow(2, semi / 12);
+      
+      switch (instId) {
+        case "piano": {
+          // Acoustic Piano emulation using 4 harmonics with individual decays + hammer strike
+          const baseVol = 0.055 * vel;
           
-          const osc1 = ctx.createOscillator();
-          const osc2 = ctx.createOscillator();
-          const g = ctx.createGain();
-          const fl = ctx.createBiquadFilter();
-          
-          osc1.type = "triangle";
-          osc2.type = "sine";
-          osc1.frequency.value = f;
-          osc2.frequency.value = f * 2.01;
-          
-          fl.type = "highpass";
-          fl.frequency.value = 140;
-          
-          const v = (oi === 0 ? 0.05 : oi === 1 ? 0.03 : 0.012) / (ni + 1);
-          g.gain.setValueAtTime(0, t);
-          g.gain.linearRampToValueAtTime(v, t + 0.004);
-          g.gain.exponentialRampToValueAtTime(Math.max(v * 0.2, 0.0001), t + 0.18);
-          g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-          
-          osc1.connect(fl);
-          osc2.connect(fl);
-          fl.connect(g);
-          g.connect(masterGain);
-          
-          osc1.start(t);
-          osc1.stop(t + d + 0.05);
-          osc2.start(t);
-          osc2.stop(t + d + 0.05);
-        });
-      });
-    } else if (currentInst === "guitar_electric_clean") {
-      const intervals = chordIntervals(q);
-      const baseFreq = 130.81;
-      intervals.forEach((iv, ni) => {
-        [0, 12].forEach((o, oi) => {
-          const f = baseFreq * Math.pow(2, (s + iv + o) / 12);
-          const dl = pat === "strum" ? ni * 0.035 : pat === "arpeggio" ? ni * 0.11 : 0;
-          const t = ctx.currentTime + dl;
-          
-          const osc = ctx.createOscillator();
-          const g = ctx.createGain();
-          const fl = ctx.createBiquadFilter();
-          
-          osc.type = oi === 0 ? "sine" : "triangle";
-          osc.frequency.value = f;
-          
-          fl.type = "lowpass";
-          fl.frequency.value = 1300;
-          
-          const v = (oi === 0 ? 0.065 : 0.03) / (ni + 1);
-          g.gain.setValueAtTime(0, t);
-          g.gain.linearRampToValueAtTime(v, t + 0.008);
-          g.gain.exponentialRampToValueAtTime(v * 0.5, t + 0.25);
-          g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-          
-          osc.connect(fl);
-          fl.connect(g);
-          g.connect(masterGain);
-          
-          osc.start(t);
-          osc.stop(t + d + 0.05);
-        });
-      });
-    } else if (currentInst === "guitar_electric_dist") {
-      const intervals = chordIntervals(q);
-      const baseFreq = 130.81 - 12;
-      intervals.forEach((iv, ni) => {
-        [-3, 0, 3].forEach((dt, oi) => {
-          const f = baseFreq * Math.pow(2, (s + iv) / 12);
-          const dl = pat === "strum" ? ni * 0.025 : pat === "arpeggio" ? ni * 0.09 : 0;
-          const t = ctx.currentTime + dl;
-          
-          const osc = ctx.createOscillator();
-          const g = ctx.createGain();
-          const ampFilter = ctx.createBiquadFilter();
-          const preGain = ctx.createGain();
-          const distNode = ctx.createWaveShaper();
-          
-          osc.type = "sawtooth";
-          osc.frequency.value = f;
-          osc.detune.value = dt * 1.8;
-          
-          ampFilter.type = "peaking";
-          ampFilter.frequency.setValueAtTime(2200, t);
-          ampFilter.Q.value = 1.2;
-          ampFilter.gain.setValueAtTime(8, t);
-          
-          preGain.gain.setValueAtTime(3.0, t);
-          
-          distNode.curve = makeDistortionCurve(75);
-          distNode.oversample = "4x";
-          
-          const v = 0.045 / (oi + 1);
-          g.gain.setValueAtTime(0, t);
-          g.gain.linearRampToValueAtTime(v, t + 0.005);
-          g.gain.linearRampToValueAtTime(v * 0.8, t + 0.08);
-          g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-          
-          osc.connect(preGain);
-          preGain.connect(distNode);
-          distNode.connect(ampFilter);
-          ampFilter.connect(g);
-          g.connect(masterGain);
-          
-          osc.start(t);
-          osc.stop(t + d + 0.05);
-        });
-      });
-    } else if (currentInst === "sax") {
-      const intervals = chordIntervals(q);
-      const baseFreq = 261.63 - 12;
-      intervals.forEach((iv, ni) => {
-        const f = baseFreq * Math.pow(2, (s + iv) / 12);
-        const t = ctx.currentTime;
-        
-        [0.99, 1.0, 1.01].forEach((detuneRate, oi) => {
-          const osc = ctx.createOscillator();
-          const g = ctx.createGain();
-          const fl = ctx.createBiquadFilter();
-          
-          osc.type = oi === 1 ? "sawtooth" : "triangle";
-          osc.frequency.value = f * detuneRate;
-          
-          const lfo = ctx.createOscillator();
-          const lfoGain = ctx.createGain();
-          lfo.frequency.value = 5.4;
-          lfoGain.gain.value = f * 0.012;
-          lfo.connect(lfoGain);
-          lfoGain.connect(osc.frequency);
-          lfo.start(t);
-          lfo.stop(t + d + 0.05);
-          
-          fl.type = "bandpass";
-          fl.frequency.setValueAtTime(250, t);
-          fl.frequency.exponentialRampToValueAtTime(1500, t + 0.12);
-          fl.frequency.exponentialRampToValueAtTime(950, t + d);
-          fl.Q.value = 1.3;
-          
-          let subOsc: OscillatorNode | null = null;
-          let subGain: GainNode | null = null;
-          if (oi === 1) {
-            subOsc = ctx.createOscillator();
-            subGain = ctx.createGain();
-            subOsc.type = "sine";
-            subOsc.frequency.value = f * 0.5;
-            subGain.gain.setValueAtTime(0, t);
-            subGain.gain.linearRampToValueAtTime(0.012, t + 0.1);
-            subGain.gain.exponentialRampToValueAtTime(0.0001, t + d);
-            subOsc.connect(subGain);
-            subGain.connect(masterGain);
-            subOsc.start(t);
-            subOsc.stop(t + d + 0.05);
-          }
-          
-          const v = 0.024 / (oi + 1);
-          g.gain.setValueAtTime(0, t);
-          g.gain.linearRampToValueAtTime(v, t + 0.12);
-          g.gain.setValueAtTime(v, t + d - 0.22);
-          g.gain.linearRampToValueAtTime(0.0001, t + d);
-          
-          osc.connect(fl);
-          fl.connect(g);
-          g.connect(masterGain);
-          
-          osc.start(t);
-          osc.stop(t + d + 0.05);
-        });
-      });
-    } else if (currentInst === "djembe") {
-      const intervals = chordIntervals(q);
-      const baseFreq = 70;
-      intervals.forEach((iv, ni) => {
-        const f = baseFreq * Math.pow(2, (s + iv) / 12);
-        const dl = pat === "strum" ? ni * 0.07 : pat === "arpeggio" ? ni * 0.13 : 0;
-        const t = ctx.currentTime + dl;
-        
-        const oscThud = ctx.createOscillator();
-        const gThud = ctx.createGain();
-        oscThud.type = "sine";
-        oscThud.frequency.setValueAtTime(f, t);
-        oscThud.frequency.exponentialRampToValueAtTime(f * 0.45, t + 0.12);
-        
-        gThud.gain.setValueAtTime(0, t);
-        gThud.gain.linearRampToValueAtTime(0.28, t + 0.003);
-        gThud.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
-        
-        oscThud.connect(gThud);
-        gThud.connect(masterGain);
-        oscThud.start(t);
-        oscThud.stop(t + 0.3);
-        
-        const oscSlap = ctx.createOscillator();
-        const gSlap = ctx.createGain();
-        const noiseGen = ctx.createBufferSource();
-        const noiseGain = ctx.createGain();
-        const noiseFilter = ctx.createBiquadFilter();
-        
-        oscSlap.type = "triangle";
-        oscSlap.frequency.setValueAtTime(f * 3.8, t);
-        oscSlap.frequency.exponentialRampToValueAtTime(f * 1.6, t + 0.05);
-        
-        gSlap.gain.setValueAtTime(0, t);
-        gSlap.gain.linearRampToValueAtTime(0.18, t + 0.002);
-        gSlap.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
-        
-        const bufferSize = ctx.sampleRate * 0.04;
-        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const outputBuffer = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          outputBuffer[i] = Math.random() * 2 - 1;
-        }
-        noiseGen.buffer = noiseBuffer;
-        
-        noiseFilter.type = "bandpass";
-        noiseFilter.frequency.setValueAtTime(2000, t);
-        noiseFilter.Q.value = 2.0;
-        
-        noiseGain.gain.setValueAtTime(0, t);
-        noiseGain.gain.linearRampToValueAtTime(0.09, t + 0.001);
-        noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
-        
-        noiseGen.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
-        noiseGain.connect(masterGain);
-        
-        oscSlap.connect(gSlap);
-        gSlap.connect(masterGain);
-        
-        oscSlap.start(t);
-        oscSlap.stop(t + 0.12);
-        noiseGen.start(t);
-        noiseGen.stop(t + 0.12);
-      });
-    } else if (currentInst === "piano") {
-      const intervals = chordIntervals(q);
-      const baseFreq = 261.63;
-      const harmonics = [1, 0.5, 0.3, 0.15];
-      intervals.forEach((iv, ni) => {
-        [0, -12].forEach((o, oi) => {
-          const f = baseFreq * Math.pow(2, (s + iv + o) / 12);
-          const dl = pat === "arpeggio" ? ni * 0.1 : 0;
-          const t = ctx.currentTime + dl;
-          harmonics.forEach((a, hi) => {
-            const hf = f * (hi + 1);
-            if (hf > 8000) return;
+          // Hammer click/strike noise
+          const hammer = ctx.createOscillator();
+          const hammerG = ctx.createGain();
+          hammer.type = "triangle";
+          hammer.frequency.value = f * 7.5;
+          hammerG.gain.setValueAtTime(baseVol * 0.6, t);
+          hammerG.gain.exponentialRampToValueAtTime(0.0001, t + 0.015);
+          hammer.connect(hammerG);
+          hammerG.connect(masterGain);
+          hammer.start(t);
+          hammer.stop(t + 0.02);
+
+          // 4 sympathetic string harmonics
+          const harmonics = [1, 2, 3, 4];
+          harmonics.forEach((h) => {
+            const hf = f * h;
+            if (hf > 18000) return;
             const osc = ctx.createOscillator();
             const g = ctx.createGain();
             osc.type = "sine";
             osc.frequency.value = hf;
-            const v = (a * 0.06) / (oi + 1);
-            const dc = Math.max(0.3, d * (1 - hi * 0.12));
+            
+            const envelopeGain = (baseVol * (1.2 / h));
+            const decay = Math.max(0.2, noteLength * (1.8 / h));
             g.gain.setValueAtTime(0, t);
-            g.gain.linearRampToValueAtTime(v, t + 0.004);
-            g.gain.exponentialRampToValueAtTime(0.0001, t + dc);
+            g.gain.linearRampToValueAtTime(envelopeGain, t + 0.004);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+            
             osc.connect(g);
             g.connect(masterGain);
             osc.start(t);
-            osc.stop(t + dc + 0.05);
+            osc.stop(t + decay + 0.05);
           });
-        });
-      });
-    } else if (currentInst === "ukulele") {
-      const intervals = chordIntervals(q);
-      const baseFreq = 261.63;
-      intervals.forEach((iv, ni) => {
-        [0, 12].forEach((o, oi) => {
-          const f = baseFreq * Math.pow(2, (s + iv + o) / 12);
-          const dl = pat === "arpeggio" ? ni * 0.1 : 0;
-          const t = ctx.currentTime + dl;
-          [1, 2].forEach((h, hi) => {
-            const osc = ctx.createOscillator();
-            const g = ctx.createGain();
-            osc.type = "sine";
-            osc.frequency.value = f * h;
-            const v = (hi === 0 ? 0.06 : 0.02) / (oi + 1);
-            g.gain.setValueAtTime(0, t);
-            g.gain.linearRampToValueAtTime(v, t + 0.004);
-            g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-            osc.connect(g);
-            g.connect(masterGain);
-            osc.start(t);
-            osc.stop(t + d + 0.05);
-          });
-        });
-      });
-    } else if (currentInst === "strings") {
-      const intervals = chordIntervals(q);
-      const baseFreq = 261.63;
-      intervals.forEach((iv, ni) => {
-        [0, -12].forEach((o, oi) => {
-          const f = baseFreq * Math.pow(2, (s + iv + o) / 12);
-          const t = ctx.currentTime;
-          [-5, 5].forEach((dt) => {
-            const osc = ctx.createOscillator();
-            const g = ctx.createGain();
-            const fl = ctx.createBiquadFilter();
-            osc.type = "sawtooth";
-            osc.frequency.value = f;
-            osc.detune.value = dt;
-            fl.type = "lowpass";
-            fl.frequency.value = f * 2;
-            const v = 0.025 / (oi + 1);
-            g.gain.setValueAtTime(0, t);
-            g.gain.linearRampToValueAtTime(v, t + 0.25);
-            g.gain.setValueAtTime(v, t + d - 0.35);
-            g.gain.linearRampToValueAtTime(0, t + d);
-            osc.connect(fl);
-            fl.connect(g);
-            g.connect(masterGain);
-            osc.start(t);
-            osc.stop(t + d + 0.05);
-          });
-        });
-      });
-    } else if (currentInst === "synth") {
-      const intervals = chordIntervals(q);
-      const baseFreq = 261.63;
-      intervals.forEach((iv, ni) => {
-        [0, -12].forEach((o, oi) => {
-          const f = baseFreq * Math.pow(2, (s + iv + o) / 12);
-          const t = ctx.currentTime;
-          [-4, 4].forEach((dt) => {
-            const osc = ctx.createOscillator();
-            const g = ctx.createGain();
-            const fl = ctx.createBiquadFilter();
-            osc.type = "sawtooth";
-            osc.frequency.value = f;
-            osc.detune.value = dt;
-            fl.type = "lowpass";
-            fl.frequency.value = f * 4;
-            fl.Q.value = 1;
-            const v = 0.03 / (oi + 1);
-            g.gain.setValueAtTime(0, t);
-            g.gain.linearRampToValueAtTime(v, t + 0.3);
-            g.gain.setValueAtTime(v, t + d - 0.4);
-            g.gain.linearRampToValueAtTime(0, t + d);
-            osc.connect(fl);
-            fl.connect(g);
-            g.connect(masterGain);
-            osc.start(t);
-            osc.stop(t + d + 0.05);
-          });
-        });
-      });
-    } else if (currentInst === "bass") {
-      const ints = [0, q === "dim" ? 6 : 7];
-      const baseFreq = 55;
-      ints.forEach((iv, ni) => {
-        const f = baseFreq * Math.pow(2, (s + iv) / 12);
-        const t = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        const fl = ctx.createBiquadFilter();
-        osc.type = "sawtooth";
-        osc.frequency.value = f;
-        fl.type = "lowpass";
-        fl.frequency.value = 500;
-        const v = ni === 0 ? 0.14 : 0.07;
-        g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(v, t + 0.008);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-        osc.connect(fl);
-        fl.connect(g);
-        g.connect(masterGain);
-        osc.start(t);
-        osc.stop(t + d + 0.05);
-
-        if (ni === 0) {
-          const o2 = ctx.createOscillator();
-          const g2 = ctx.createGain();
-          o2.type = "sine";
-          o2.frequency.value = f;
-          g2.gain.setValueAtTime(0, t);
-          g2.gain.linearRampToValueAtTime(0.1, t + 0.008);
-          g2.gain.exponentialRampToValueAtTime(0.0001, t + d);
-          o2.connect(g2);
-          g2.connect(masterGain);
-          o2.start(t);
-          o2.stop(t + d + 0.05);
+          break;
         }
-      });
-    }
+        case "guitar": {
+          // Classic Classical Acoustic Guitar Nylon Pluck
+          // Lowpass filter frequency sweeps exponentially down on string release!
+          const baseVol = 0.07 * vel;
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const filter = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+
+          osc1.type = "sawtooth";
+          osc1.frequency.value = f;
+          osc2.type = "sine";
+          osc2.frequency.value = f * 2.0;
+
+          filter.type = "lowpass";
+          filter.Q.value = 1.5;
+          filter.frequency.setValueAtTime(2000, t);
+          filter.frequency.exponentialRampToValueAtTime(280, t + 0.18);
+
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(baseVol, t + 0.005);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + noteLength);
+
+          osc1.connect(filter);
+          osc2.connect(filter);
+          filter.connect(g);
+          g.connect(masterGain);
+
+          osc1.start(t);
+          osc1.stop(t + noteLength + 0.05);
+          osc2.start(t);
+          osc2.stop(t + noteLength + 0.05);
+          break;
+        }
+        case "guitar_acoustic": {
+          // Steel acoustic guitar: sharp metallic twang + pick snap sound
+          const baseVol = 0.06 * vel;
+          const oscSaw = ctx.createOscillator();
+          const oscTri = ctx.createOscillator();
+          const filter = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+
+          oscSaw.type = "sawtooth";
+          oscSaw.frequency.value = f;
+          oscTri.type = "triangle";
+          oscTri.frequency.value = f * 2.01; // slightly detuned octave course
+
+          filter.type = "lowpass";
+          filter.Q.value = 3.0; // ringing peak
+          filter.frequency.setValueAtTime(4500, t);
+          filter.frequency.exponentialRampToValueAtTime(450, t + 0.12);
+
+          // Fast noise pick hit
+          const noise = ctx.createBufferSource();
+          noise.buffer = getNoiseBuffer();
+          const noiseF = ctx.createBiquadFilter();
+          noiseF.type = "highpass";
+          noiseF.frequency.value = 3500;
+          const noiseG = ctx.createGain();
+          noiseG.gain.setValueAtTime(baseVol * 0.75, t);
+          noiseG.gain.exponentialRampToValueAtTime(0.0001, t + 0.008);
+          noise.connect(noiseF);
+          noiseF.connect(noiseG);
+          noiseG.connect(masterGain);
+          noise.start(t);
+          noise.stop(t + 0.015);
+
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(baseVol, t + 0.003);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + noteLength * 0.9);
+
+          oscSaw.connect(filter);
+          oscTri.connect(filter);
+          filter.connect(g);
+          g.connect(masterGain);
+
+          oscSaw.start(t);
+          oscSaw.stop(t + noteLength + 0.05);
+          oscTri.start(t);
+          oscTri.stop(t + noteLength + 0.05);
+          break;
+        }
+        case "guitar_electric_clean": {
+          // Warm clean electric jazz wood-body guitar + soft warm tremolo
+          const baseVol = 0.075 * vel;
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const filter = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+
+          osc1.type = "sine";
+          osc1.frequency.value = f;
+          osc2.type = "triangle";
+          osc2.frequency.value = f * 1.995; // chorus detuning
+
+          filter.type = "lowpass";
+          filter.frequency.setValueAtTime(1100, t);
+          
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(baseVol, t + 0.012); // slightly warmer slope
+          g.gain.exponentialRampToValueAtTime(baseVol * 0.4, t + 0.3);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + noteLength);
+
+          osc1.connect(filter);
+          osc2.connect(filter);
+          filter.connect(g);
+          g.connect(masterGain);
+
+          osc1.start(t);
+          osc1.stop(t + noteLength + 0.05);
+          osc2.start(t);
+          osc2.stop(t + noteLength + 0.05);
+          break;
+        }
+        case "guitar_electric_dist": {
+          // Epic high-gain heavy grunge/metal distortion
+          const baseVol = 0.035 * vel;
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const shaper = ctx.createWaveShaper();
+          const cab = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+
+          osc1.type = "sawtooth";
+          osc1.frequency.value = f;
+          osc1.detune.value = -6;
+          osc2.type = "sawtooth";
+          osc2.frequency.value = f;
+          osc2.detune.value = 6;
+
+          shaper.curve = makeDistortionCurve(110); // extreme tube distortion clip
+          shaper.oversample = "4x";
+
+          cab.type = "peaking"; // cabinet mid rise simulation
+          cab.frequency.value = 1800;
+          cab.Q.value = 1.3;
+          cab.gain.value = 10; // high boost on cab frequencies
+
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(baseVol, t + 0.004);
+          g.gain.linearRampToValueAtTime(baseVol * 0.85, t + 0.1);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + noteLength);
+
+          osc1.connect(shaper);
+          osc2.connect(shaper);
+          shaper.connect(cab);
+          cab.connect(g);
+          g.connect(masterGain);
+
+          osc1.start(t);
+          osc1.stop(t + noteLength + 0.05);
+          osc2.start(t);
+          osc2.stop(t + noteLength + 0.05);
+          break;
+        }
+        case "sax": {
+          // Warm jazz woodwind reed sax with custom formant filter
+          const baseVol = 0.045 * vel;
+          const oscSaw = ctx.createOscillator();
+          const oscTri = ctx.createOscillator();
+          const formantFilter = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+
+          oscSaw.type = "sawtooth";
+          oscSaw.frequency.value = f * 0.999;
+          oscTri.type = "triangle";
+          oscTri.frequency.value = f * 2.001;
+
+          // Air wind/breath sound
+          const air = ctx.createBufferSource();
+          air.buffer = getNoiseBuffer();
+          const airF = ctx.createBiquadFilter();
+          airF.type = "bandpass";
+          airF.frequency.value = 1200;
+          airF.Q.value = 1.0;
+          const airG = ctx.createGain();
+          airG.gain.setValueAtTime(0, t);
+          airG.gain.linearRampToValueAtTime(baseVol * 0.18, t + 0.035);
+          airG.gain.exponentialRampToValueAtTime(0.0001, t + noteLength);
+          air.connect(airF);
+          airF.connect(airG);
+          airG.connect(masterGain);
+          air.start(t);
+          air.stop(t + noteLength);
+
+          formantFilter.type = "peaking"; // Sax voice pipe frequency
+          formantFilter.frequency.setValueAtTime(750, t);
+          formantFilter.Q.value = 2.2;
+          formantFilter.gain.value = 12;
+
+          // 5.2Hz Sax player vibrato
+          const vibrato = ctx.createOscillator();
+          const vibratoG = ctx.createGain();
+          vibrato.frequency.value = 5.2;
+          vibratoG.gain.value = f * 0.015;
+          vibrato.connect(vibratoG);
+          vibratoG.connect(oscSaw.frequency);
+          vibratoG.connect(oscTri.frequency);
+          vibrato.start(t);
+          vibrato.stop(t + noteLength);
+
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(baseVol, t + 0.045); // wind swell
+          g.gain.setValueAtTime(baseVol, t + noteLength - 0.12);
+          g.gain.linearRampToValueAtTime(0.0001, t + noteLength);
+
+          oscSaw.connect(formantFilter);
+          oscTri.connect(formantFilter);
+          formantFilter.connect(g);
+          g.connect(masterGain);
+
+          oscSaw.start(t);
+          oscSaw.stop(t + noteLength + 0.05);
+          oscTri.start(t);
+          oscTri.stop(t + noteLength + 0.05);
+          break;
+        }
+        case "trumpet": {
+          // Sharp, bright, recognizable brass ensemble trumpet with sweep
+          const baseVol = 0.04 * vel;
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const filter = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+
+          osc1.type = "sawtooth";
+          osc1.frequency.value = f;
+          osc2.type = "sawtooth";
+          osc2.frequency.value = f * 2.0;
+
+          // Brassy sweep filter simulates lips pressure building
+          filter.type = "lowpass";
+          filter.Q.value = 2.5;
+          filter.frequency.setValueAtTime(320, t);
+          filter.frequency.exponentialRampToValueAtTime(2600, t + 0.052);
+          filter.frequency.linearRampToValueAtTime(1400, t + noteLength);
+
+          // Lip vibrato
+          const vibrato = ctx.createOscillator();
+          const vibratoG = ctx.createGain();
+          vibrato.frequency.value = 6.4; // rapid trumpet vibrato
+          vibratoG.gain.value = f * 0.012;
+          vibrato.connect(vibratoG);
+          vibratoG.connect(osc1.frequency);
+          vibratoG.connect(osc2.frequency);
+          vibrato.start(t);
+          vibrato.stop(t + noteLength);
+
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(baseVol, t + 0.024); // brass attack
+          g.gain.setValueAtTime(baseVol, t + noteLength - 0.1);
+          g.gain.linearRampToValueAtTime(0.0001, t + noteLength);
+
+          osc1.connect(filter);
+          osc2.connect(filter);
+          filter.connect(g);
+          g.connect(masterGain);
+
+          osc1.start(t);
+          osc1.stop(t + noteLength + 0.05);
+          osc2.start(t);
+          osc2.stop(t + noteLength + 0.05);
+          break;
+        }
+        case "accordion": {
+          // Highly authentic Balkan accordion: Multi-reed musette squeal with bellows tremolo
+          const baseVol = 0.05 * vel;
+          const oscMain = ctx.createOscillator();
+          const oscMusSharp = ctx.createOscillator();
+          const oscMusFlat = ctx.createOscillator();
+          const oscBassoon = ctx.createOscillator();
+          const filter = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+
+          oscMain.type = "triangle";
+          oscMain.frequency.value = f;
+
+          oscMusSharp.type = "sawtooth";
+          oscMusSharp.frequency.value = f * 1.0085; // musette sharp reed (+9 cents)
+
+          oscMusFlat.type = "sawtooth";
+          oscMusFlat.frequency.value = f * 0.9915; // musette flat reed (-9 cents)
+
+          oscBassoon.type = "sine";
+          oscBassoon.frequency.value = f * 0.5; // lower octave registration
+
+          filter.type = "lowpass";
+          filter.frequency.value = 1450;
+          
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(baseVol, t + 0.035); // bellows squeeze attack
+          g.gain.setValueAtTime(baseVol, t + noteLength - 0.08);
+          g.gain.linearRampToValueAtTime(0.0001, t + noteLength);
+
+          oscMain.connect(filter);
+          oscMusSharp.connect(filter);
+          oscMusFlat.connect(filter);
+          oscBassoon.connect(g);
+
+          filter.connect(g);
+          g.connect(masterGain);
+
+          oscMain.start(t);
+          oscMusSharp.start(t);
+          oscMusFlat.start(t);
+          oscBassoon.start(t);
+
+          oscMain.stop(t + noteLength + 0.05);
+          oscMusSharp.stop(t + noteLength + 0.05);
+          oscMusFlat.stop(t + noteLength + 0.05);
+          oscBassoon.stop(t + noteLength + 0.05);
+          break;
+        }
+        case "tambura": {
+          // Authentic Balkan Tambura: Steel course detuned rapid high metallic pluck
+          const baseVol = 0.065 * vel;
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const filter = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+
+          osc1.type = "sawtooth";
+          osc1.frequency.value = f * 0.997;
+          osc2.type = "triangle";
+          osc2.frequency.value = f * 1.006; // Course beating string (~10 cents detuned)
+
+          filter.type = "highpass";
+          filter.frequency.value = 200; // cut bottom mud completely for metal texture
+
+          // Sharp metallic pick-striking high frequency burst
+          const pick = ctx.createBufferSource();
+          pick.buffer = getNoiseBuffer();
+          const pickFilter = ctx.createBiquadFilter();
+          pickFilter.type = "bandpass";
+          pickFilter.frequency.value = 4200;
+          pickFilter.Q.value = 2.5;
+          const pickG = ctx.createGain();
+          pickG.gain.setValueAtTime(baseVol * 0.9, t);
+          pickG.gain.exponentialRampToValueAtTime(0.0001, t + 0.006);
+          pick.connect(pickFilter);
+          pickFilter.connect(pickG);
+          pickG.connect(masterGain);
+          pick.start(t);
+          pick.stop(t + 0.012);
+
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(baseVol, t + 0.0035);
+          g.gain.exponentialRampToValueAtTime(baseVol * 0.15, t + 0.07);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + noteLength * 0.75);
+
+          osc1.connect(filter);
+          osc2.connect(filter);
+          filter.connect(g);
+          g.connect(masterGain);
+
+          osc1.start(t);
+          osc1.stop(t + noteLength + 0.05);
+          osc2.start(t);
+          osc2.stop(t + noteLength + 0.05);
+          break;
+        }
+        case "djembe": {
+          // High-fidelity ethnic skin percussion
+          const baseVol = 0.18 * vel;
+          
+          // Skin low tone bounce/thud (sine pitch sweep drops to floor)
+          const oscThud = ctx.createOscillator();
+          const gThud = ctx.createGain();
+          oscThud.type = "sine";
+          oscThud.frequency.setValueAtTime(f * 0.7, t);
+          oscThud.frequency.exponentialRampToValueAtTime(45, t + 0.08);
+
+          gThud.gain.setValueAtTime(0, t);
+          gThud.gain.linearRampToValueAtTime(baseVol * 1.2, t + 0.003);
+          gThud.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+
+          oscThud.connect(gThud);
+          gThud.connect(masterGain);
+          oscThud.start(t);
+          oscThud.stop(t + 0.2);
+
+          // Skin ring edge slap
+          const oscSlap = ctx.createOscillator();
+          const gSlap = ctx.createGain();
+          oscSlap.type = "triangle";
+          oscSlap.frequency.setValueAtTime(f * 3.5, t);
+          oscSlap.frequency.exponentialRampToValueAtTime(f * 1.5, t + 0.04);
+
+          gSlap.gain.setValueAtTime(0, t);
+          gSlap.gain.linearRampToValueAtTime(baseVol * 0.61, t + 0.002);
+          gSlap.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+
+          oscSlap.connect(gSlap);
+          gSlap.connect(masterGain);
+          oscSlap.start(t);
+          oscSlap.stop(t + 0.08);
+          break;
+        }
+        case "ukulele": {
+          // Sweet tiny bright nylon uke chords
+          const baseVol = 0.06 * vel;
+          const oscMain = ctx.createOscillator();
+          const filter = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+
+          oscMain.type = "triangle";
+          oscMain.frequency.value = f;
+
+          filter.type = "highpass";
+          filter.frequency.value = 280; // tiny woody resonance
+
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(baseVol, t + 0.004);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + noteLength * 0.65);
+
+          oscMain.connect(filter);
+          filter.connect(g);
+          g.connect(masterGain);
+
+          oscMain.start(t);
+          oscMain.stop(t + noteLength + 0.05);
+          break;
+        }
+        case "strings": {
+          // Slow cinematic lush bowed strings ensemble
+          const baseVol = 0.04 * vel;
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const filter = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+
+          osc1.type = "sawtooth";
+          osc1.frequency.value = f * 0.995;
+          osc2.type = "sawtooth";
+          osc2.frequency.value = f * 1.005;
+
+          filter.type = "lowpass";
+          filter.frequency.setValueAtTime(f * 2.8, t);
+
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(baseVol, t + 0.180); // slow bow attack
+          g.gain.setValueAtTime(baseVol, t + noteLength - 0.12);
+          g.gain.linearRampToValueAtTime(0.0001, t + noteLength);
+
+          osc1.connect(filter);
+          osc2.connect(filter);
+          filter.connect(g);
+          g.connect(masterGain);
+
+          osc1.start(t);
+          osc1.stop(t + noteLength + 0.05);
+          osc2.start(t);
+          osc2.stop(t + noteLength + 0.05);
+          break;
+        }
+        case "synth": {
+          // Lush retro cosmic supersaw wave
+          const baseVol = 0.038 * vel;
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const osc3 = ctx.createOscillator();
+          const filter = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+
+          osc1.type = "sawtooth";
+          osc1.frequency.value = f;
+          osc2.type = "sawtooth";
+          osc2.frequency.value = f * 0.994;
+          osc3.type = "sawtooth";
+          osc3.frequency.value = f * 1.006;
+
+          filter.type = "lowpass";
+          filter.Q.value = 1.8;
+          filter.frequency.setValueAtTime(f * 2.0, t);
+          filter.frequency.linearRampToValueAtTime(f * 6.5, t + 0.18);
+          filter.frequency.exponentialRampToValueAtTime(f * 2.5, t + noteLength);
+
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(baseVol, t + 0.015);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + noteLength);
+
+          osc1.connect(filter);
+          osc2.connect(filter);
+          osc3.connect(filter);
+          filter.connect(g);
+          g.connect(masterGain);
+
+          osc1.start(t);
+          osc1.stop(t + noteLength + 0.05);
+          osc2.start(t);
+          osc2.stop(t + noteLength + 0.05);
+          osc3.start(t);
+          osc3.stop(t + noteLength + 0.05);
+          break;
+        }
+        case "bass": {
+          // Deep punchy bassline routine root
+          const baseVol = 0.08 * vel;
+          const oscSine = ctx.createOscillator();
+          const oscSaw = ctx.createOscillator();
+          const filter = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+
+          oscSine.type = "sine";
+          oscSine.frequency.value = f * 0.5; // sub octave frequency
+
+          oscSaw.type = "sawtooth";
+          oscSaw.frequency.value = f * 0.5;
+
+          filter.type = "lowpass";
+          filter.frequency.value = 175;
+
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(baseVol, t + 0.005);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + noteLength * 0.85);
+
+          oscSine.connect(filter);
+          oscSaw.connect(filter);
+          filter.connect(g);
+          g.connect(masterGain);
+
+          oscSine.start(t);
+          oscSine.stop(t + noteLength + 0.05);
+          oscSaw.start(t);
+          oscSaw.stop(t + noteLength + 0.05);
+          break;
+        }
+        default: {
+          // Standard polyphonic fallback sine
+          const baseVol = 0.07 * vel;
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.value = f;
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(baseVol, t + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + noteLength);
+          osc.connect(g);
+          g.connect(masterGain);
+          osc.start(t);
+          osc.stop(t + noteLength + 0.05);
+          break;
+        }
+      }
+    };
+
+    const intervals = chordIntervals(q);
+    // Dynamic guitar-style chord voicing to give fullness across registers:
+    const chordVoicing = [
+      s - 12,                  // Bass Root
+      s + intervals[0],        // Center Root
+      s + intervals[1],        // Center Third
+      s + intervals[2],        // Center Fifth
+      s + intervals[0] + 12,   // Treble Root
+      s + intervals[2] + 12    // Treble Fifth
+    ];
+
+    instrumentsToPlay.forEach((instId) => {
+      if (pat === "block") {
+        // Simple full block strike on beat 0
+        chordVoicing.forEach((semi) => {
+          playChordNote(semi, ctx.currentTime, d * 0.85, 0.75, instId);
+        });
+      } else if (pat === "arpeggio") {
+        // Staggered arpeggio rising sequence and back
+        chordVoicing.forEach((semi, index) => {
+          const triggerTime = ctx.currentTime + index * 0.11;
+          const decay = Math.max(0.3, d - index * 0.11);
+          playChordNote(semi, triggerTime, decay * 0.8, 0.85, instId);
+        });
+      } else if (pat === "strum") {
+        // Classic acoustic strum pattern across beats
+        const strumDelay = 0.025;
+        // Beat 1 (Downstrum)
+        chordVoicing.forEach((semi, idx) => {
+          playChordNote(semi, ctx.currentTime + idx * strumDelay, beatDur * 0.95, 0.9, instId);
+        });
+        // Beat 2 (Soft high plucks)
+        if (activeBeatsPerBar >= 3) {
+          chordVoicing.slice(2, 5).forEach((semi, idx) => {
+            playChordNote(semi, ctx.currentTime + beatDur + idx * 0.01, beatDur * 0.5, 0.65, instId);
+          });
+        }
+        // Beat 2.5 (Upstrum)
+        if (activeBeatsPerBar >= 3) {
+          chordVoicing.slice(1, 4).reverse().forEach((semi, idx) => {
+            playChordNote(semi, ctx.currentTime + beatDur * 1.5 + idx * 0.02, beatDur * 0.4, 0.75, instId);
+          });
+        }
+        // Beat 3 (Downstrum)
+        if (activeBeatsPerBar >= 3) {
+          chordVoicing.forEach((semi, idx) => {
+            playChordNote(semi, ctx.currentTime + beatDur * 2 + idx * strumDelay, beatDur * 0.95, 0.85, instId);
+          });
+        }
+        // Beat 4 (Treble high pluck)
+        if (activeBeatsPerBar >= 4) {
+          chordVoicing.slice(3, 6).forEach((semi, idx) => {
+            playChordNote(semi, ctx.currentTime + beatDur * 3 + idx * 0.01, beatDur * 0.9, 0.7, instId);
+          });
+        }
+      } else if (pat === "balkan_7_8") {
+        // Folk Balkan 7/8 rhythm (grouped as 3 + 2 + 2 subbeats)
+        const e = d / 7;
+        const subBeats = [
+          { off: 0, vel: 1.25 }, // Beat 1 (weighted accent, start of 3)
+          { off: 3 * e, vel: 0.85 }, // Beat 2 (short step, start of 2)
+          { off: 5 * e, vel: 1.0 }  // Beat 3 (short step, start of 2)
+        ];
+        subBeats.forEach((sb) => {
+          const t = ctx.currentTime + sb.off;
+          const strokeDelay = 0.015;
+          chordVoicing.forEach((semi, idx) => {
+            playChordNote(semi, t + idx * strokeDelay, e * 1.5, sb.vel, instId);
+          });
+        });
+      } else if (pat === "balkan_9_8") {
+        // Traditional Balkan 9/8 rhythm (grouped as 2 + 2 + 2 + 3 subbeats)
+        const e = d / 9;
+        const subBeats = [
+          { off: 0, vel: 0.9 }, // short 2
+          { off: 2 * e, vel: 0.85 }, // short 2
+          { off: 4 * e, vel: 0.9 }, // short 2
+          { off: 6 * e, vel: 1.35 }  // long heavy dragging 3 (strong folk dance stomp)
+        ];
+        subBeats.forEach((sb) => {
+          const t = ctx.currentTime + sb.off;
+          const strokeDelay = 0.014;
+          chordVoicing.forEach((semi, idx) => {
+            playChordNote(semi, t + idx * strokeDelay, e * 1.6, sb.vel, instId);
+          });
+        });
+      } else if (pat === "reggae") {
+        // Deep offbeat skank triggers chord strictly on half beats ("the AND")
+        for (let idx = 0; idx < activeBeatsPerBar; idx++) {
+          const t = ctx.currentTime + beatDur * (idx + 0.45);
+          chordVoicing.slice(1, 5).forEach((semi) => {
+            playChordNote(semi, t, 0.08, 0.95, instId);
+          });
+        }
+      } else if (pat === "rumba") {
+        // Campfire Flamenco / Pop Rumba syncopation
+        const triggers = [
+          { off: 0, vel: 1.2 },
+          { off: beatDur * 0.75, vel: 0.75 },
+          { off: beatDur * 1.5, vel: 0.85 },
+          { off: beatDur * 2.25, vel: 1.1 }, // Syncopated slap/downaccent
+          { off: beatDur * 3.0, vel: 0.85 }
+        ];
+        triggers.forEach((tr) => {
+          if (tr.off < d) {
+            const t = ctx.currentTime + tr.off;
+            const strDelay = 0.02;
+            chordVoicing.forEach((semi, idx) => {
+              playChordNote(semi, t + idx * strDelay, beatDur * 0.6, tr.vel, instId);
+            });
+          }
+        });
+      } else if (pat === "waltz") {
+        // Waltz 3/4 (Boom-chic-chic)
+        // Beat 1 (Boom): Bass string octave
+        chordVoicing.slice(0, 2).forEach((semi) => {
+          playChordNote(semi, ctx.currentTime, beatDur * 0.9, 1.25, instId);
+        });
+        // Beat 2 (Chic): Treble chords
+        chordVoicing.slice(2, 6).forEach((semi) => {
+          playChordNote(semi, ctx.currentTime + beatDur, beatDur * 0.75, 0.85, instId);
+        });
+        // Beat 3 (Chic): Treble chords
+        chordVoicing.slice(2, 6).forEach((semi) => {
+          playChordNote(semi, ctx.currentTime + beatDur * 2, beatDur * 0.75, 0.85, instId);
+        });
+      }
+    }); // closes instrumentsToPlay.forEach
+  };
+
+  const toggleInstrument = (instId: string) => {
+    setActiveInstruments((prev) => {
+      const isCurrentlyActive = prev.includes(instId);
+      if (isCurrentlyActive) {
+        if (prev.length <= 1) {
+          showToast("Es muss mindestens ein Instrument ausgewählt sein!");
+          return prev;
+        }
+        const updated = prev.filter(id => id !== instId);
+        setCurrentInst(updated[0] || "piano");
+        return updated;
+      } else {
+        const updated = [...prev, instId];
+        setCurrentInst(instId);
+        return updated;
+      }
+    });
   };
 
   const playKick = (time: number) => {
@@ -2146,6 +2500,7 @@ export default function App() {
       bpm,
       beatsPerBar,
       currentInst,
+      activeInstruments,
       strumPattern,
       drumPattern,
       bassPattern,
@@ -2170,6 +2525,11 @@ export default function App() {
     if (song.bpm) setBpm(song.bpm);
     if (song.beatsPerBar) setBeatsPerBar(song.beatsPerBar);
     if (song.currentInst) setCurrentInst(song.currentInst);
+    if (song.activeInstruments) {
+      setActiveInstruments(song.activeInstruments);
+    } else if (song.currentInst) {
+      setActiveInstruments([song.currentInst]);
+    }
     if (song.strumPattern) setStrumPattern(song.strumPattern);
     if (song.drumPattern) setDrumPattern(song.drumPattern);
     if (song.bassPattern) setBassPattern(song.bassPattern);
@@ -2246,6 +2606,7 @@ export default function App() {
       title: whatsAppSongTitle || "Mein Jam-Preset",
       bpm,
       currentInst,
+      activeInstruments,
       drumsOn,
       basslineOn,
       beatsPerBar,
@@ -2336,6 +2697,11 @@ export default function App() {
         // Restore all music configs
         if (typeof imported.bpm === "number") setBpm(imported.bpm);
         if (typeof imported.currentInst === "string") setCurrentInst(imported.currentInst);
+        if (imported.activeInstruments && Array.isArray(imported.activeInstruments)) {
+          setActiveInstruments(imported.activeInstruments);
+        } else if (typeof imported.currentInst === "string") {
+          setActiveInstruments([imported.currentInst]);
+        }
         if (typeof imported.drumsOn === "boolean") setDrumsOn(imported.drumsOn);
         if (typeof imported.basslineOn === "boolean") setBasslineOn(imported.basslineOn);
         if (imported.beatsPerBar === 3 || imported.beatsPerBar === 4) setBeatsPerBar(imported.beatsPerBar);
@@ -3386,61 +3752,220 @@ export default function App() {
                 </div>
               )}
 
-              <div className="rounded-2xl bg-[#2a1e10] border border-[#4a3828] p-6 text-center shadow-xl">
-                {/* Gauge visualization using SVG for precise smooth needle movement */}
-                <div className="relative h-32 w-full flex items-center justify-center">
-                  <svg viewBox="0 0 300 150" className="w-full max-w-[240px]">
+              <div className="rounded-2xl bg-[#2a1e10] border border-[#4a3828] p-6 text-center shadow-xl relative overflow-hidden">
+                {/* Visual Feedback Glowing Backwash */}
+                {tunerNote !== "-" && (
+                  <div 
+                    className={`absolute inset-0 pointer-events-none transition-opacity duration-300 -z-10 opacity-15 filter blur-3xl ${
+                      Math.abs(tunerCents) <= 3 
+                        ? "bg-[#4a9e5c]" 
+                        : Math.abs(tunerCents) <= 15 
+                        ? "bg-[#d4943c]" 
+                        : "bg-[#b84a32]"
+                    }`}
+                  />
+                )}
+
+                {/* Sub-Cent High Precision Arch Dial */}
+                <div className="relative h-32 w-full flex items-center justify-center mb-1">
+                  <svg viewBox="0 0 300 150" className="w-full max-w-[250px]">
+                    <defs>
+                      <linearGradient id="dialGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#b84a32" />
+                        <stop offset="35%" stopColor="#d4943c" />
+                        <stop offset="47%" stopColor="#4a9e5c" />
+                        <stop offset="53%" stopColor="#4a9e5c" />
+                        <stop offset="65%" stopColor="#d4943c" />
+                        <stop offset="100%" stopColor="#b84a32" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Outer Color Gradient Guide Arch */}
                     <path
-                      d="M 30 140 A 110 110 0 0 1 270 140"
+                      d="M 40 135 A 100 100 0 0 1 260 135"
                       fill="none"
-                      stroke="#4a3828"
-                      strokeWidth="10"
+                      stroke="url(#dialGrad)"
+                      strokeWidth="3.5"
                       strokeLinecap="round"
+                      opacity="0.85"
                     />
+
+                    {/* Dark backing base arc */}
                     <path
-                      d="M 110 38 A 110 110 0 0 1 190 38"
+                      d="M 44 135 A 96 96 0 0 1 256 135"
                       fill="none"
-                      stroke="#4a9e5c"
-                      strokeWidth="10"
-                      strokeLinecap="round"
-                      opacity="0.8"
+                      stroke="#1c1209"
+                      strokeWidth="1"
+                      strokeDasharray="2,3"
+                      opacity="0.4"
                     />
-                    {/* Gauge needle rotates based on cents deviation (-50 to +50 cents = -45 to +45 deg) */}
+
+                    {/* Tick Generation */}
+                    {Array.from({ length: 21 }).map((_, idx) => {
+                      const c = -50 + idx * 5;
+                      const angleDeg = (c / 50) * 45;
+                      const angleRad = (angleDeg * Math.PI) / 180;
+                      const isMajor = c % 10 === 0;
+                      const isCenter = c === 0;
+                      
+                      const rOuter = 110;
+                      const rInner = isMajor ? 97 : 103;
+                      
+                      const x1 = 150 + rInner * Math.sin(angleRad);
+                      const y1 = 135 - rInner * Math.cos(angleRad);
+                      const x2 = 150 + rOuter * Math.sin(angleRad);
+                      const y2 = 135 - rOuter * Math.cos(angleRad);
+
+                      let strokeColor = "#4a3828";
+                      if (tunerNote !== "-") {
+                        if (isCenter && Math.abs(tunerCents) <= 3) {
+                          strokeColor = "#52c46c";
+                        } else if (Math.abs(tunerCents - c) <= 2.5) {
+                          strokeColor = Math.abs(c) <= 3 ? "#4a9e5c" : Math.abs(c) <= 15 ? "#d4943c" : "#b84a32";
+                        }
+                      }
+
+                      return (
+                        <g key={c}>
+                          <line
+                            x1={x1}
+                            y1={y1}
+                            x2={x2}
+                            y2={y2}
+                            stroke={strokeColor}
+                            strokeWidth={isMajor ? (isCenter ? 3 : 2) : 1}
+                            strokeLinecap="round"
+                            className="transition-all duration-150"
+                          />
+                          {isMajor && (
+                            <text
+                              x={150 + 120 * Math.sin(angleRad)}
+                              y={135 - 120 * Math.cos(angleRad) + 3}
+                              fill={isCenter ? "#4a9e5c" : Math.abs(c) <= 15 ? "#7a6a58" : "#5a4a3a"}
+                              fontSize="7.5"
+                              fontWeight={isCenter ? "black" : "bold"}
+                              fontFamily="monospace"
+                              textAnchor="middle"
+                            >
+                              {isCenter ? "MID" : c > 0 ? `+${c}` : c}
+                            </text>
+                          )}
+                        </g>
+                      );
+                    })}
+
+                    {/* Cent Highlight Center Shield */}
+                    <g transform="translate(150, 135)">
+                      <circle cx="0" cy="0" r="14" fill="#120a04" stroke="#4a3828" strokeWidth="1" />
+                      <circle cx="0" cy="0" r="5" fill={tunerNote !== "-" && Math.abs(tunerCents) <= 3 ? "#4a9e5c" : "#d4943c"} />
+                    </g>
+
+                    {/* Main Needle */}
                     <line
                       x1="150"
-                      y1="140"
+                      y1="135"
                       x2="150"
-                      y2="30"
-                      stroke="#f0e0cc"
-                      strokeWidth="3.5"
+                      y2="36"
+                      stroke={tunerNote !== "-" ? (Math.abs(tunerCents) <= 3 ? "#4a9e5c" : "#d4943c") : "#5a4a3a"}
+                      strokeWidth={Math.abs(tunerCents) <= 3 && tunerNote !== "-" ? 3.5 : 2.5}
                       strokeLinecap="round"
                       style={{
                         transform: `rotate(${(tunerCents / 50) * 45}deg)`,
-                        transformOrigin: "150px 140px",
-                        transition: "transform 0.08s ease-out"
+                        transformOrigin: "150px 135px",
+                        transition: "transform 0.08s cubic-bezier(0.1, 0.8, 0.3, 1)"
                       }}
                     />
-                    <circle cx="150" cy="140" r="8" fill="#1a1008" stroke="#d4943c" strokeWidth="2" />
                   </svg>
                 </div>
 
-                {/* Detected Note */}
-                <div className="text-6xl font-serif font-black text-[#f0e0cc] tracking-tighter my-2">
-                  {tunerNote}
+                {/* Sub-Cent Digital Strobe-Indicator */}
+                <div className="flex flex-col items-center justify-center my-3">
+                  {/* Note block & Status light */}
+                  <div className="relative inline-flex items-center justify-center">
+                    <div className="text-6xl font-serif font-black text-[#f0e0cc] tracking-tighter transition-all duration-150 select-none">
+                      {tunerNote}
+                    </div>
+                    {/* Perfect in-tune LOCK symbol indicator */}
+                    {tunerNote !== "-" && Math.abs(tunerCents) <= 3 && (
+                      <motion.div 
+                        initial={{ scale: 0.5, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="absolute -right-8 -top-1 bg-[#153018] border border-[#4a9e5c]/60 text-[#4a9e5c] text-[8px] font-mono font-black py-0.5 px-1.5 rounded-full select-none"
+                      >
+                        LOCK ✓
+                      </motion.div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Status metrics */}
-                <div className="flex justify-center gap-6 text-xs text-[#7a6a58] font-mono border-t border-b border-[#4a3828]/40 py-3 mb-6">
-                  <div>
-                    <span className="text-[#c8b8a4]">Abweichung:</span>{" "}
-                    <span className="font-extrabold text-[#d4943c]">
-                      {tunerCents > 0 ? `+${tunerCents}` : tunerCents} Cents
+                {/* Realtime Fine-Tuning Calibration Matrix */}
+                <div className="mb-4 px-2.5 py-2 bg-[#120a04] border border-[#4a3828]/45 rounded-xl">
+                  {/* Direction hints */}
+                  <div className="flex justify-between items-center text-[8.5px] font-mono text-[#7a6a58] uppercase mb-1.5 font-black tracking-wider">
+                    <span className={tunerCents < -3 && tunerNote !== "-" ? "text-red-400" : ""}>♭ FLAT</span>
+                    <span className={Math.abs(tunerCents) <= 3 && tunerNote !== "-" ? "text-[#4a9e5c] animate-pulse" : ""}>
+                      {tunerNote !== "-" ? (Math.abs(tunerCents) <= 3 ? "PERFEKT STIMMT" : `${Math.abs(tunerCents)} CENT ABWEICHUNG`) : "MESSBEREIT"}
+                    </span>
+                    <span className={tunerCents > 3 && tunerNote !== "-" ? "text-red-400" : ""}>♯ SHARP</span>
+                  </div>
+
+                  {/* Progressive Micro-Cent Tuning LED indicator grid */}
+                  <div className="relative h-5 flex items-center justify-between gap-0.5 rounded-lg overflow-hidden bg-[#0d0702] px-1 border border-[#302014]">
+                    {/* Perfect vertical center focus overlay lines */}
+                    <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-0.5 bg-[#4a9e5c] z-20 shadow-[0_0_8px_#4a9e5c]" />
+                    <div className="absolute left-1/2 -translate-x-1/2 -top-1 w-2 h-2 text-[6px] text-[#4a9e5c] z-30 font-bold select-none">▼</div>
+
+                    {Array.from({ length: 25 }).map((_, i) => {
+                      const ledCentForSlot = -50 + i * 4.16;
+                      const isLedInCenterZone = Math.abs(ledCentForSlot) <= 4;
+                      
+                      let activeState = false;
+                      if (tunerNote !== "-") {
+                        if (tunerCents === 0 && isLedInCenterZone) {
+                          activeState = true;
+                        } else if (tunerCents > 0 && ledCentForSlot > 0 && ledCentForSlot <= tunerCents) {
+                          activeState = true;
+                        } else if (tunerCents < 0 && ledCentForSlot < 0 && ledCentForSlot >= tunerCents) {
+                          activeState = true;
+                        }
+                      }
+                      
+                      let barColorClass = "bg-[#251810]";
+                      if (activeState) {
+                        if (isLedInCenterZone) {
+                          barColorClass = "bg-[#4a9e5c] shadow-[0_0_8px_#4a9e5c]";
+                        } else if (Math.abs(ledCentForSlot) <= 15) {
+                          barColorClass = "bg-[#d4943c] shadow-[0_0_6px_#d4943c]";
+                        } else {
+                          barColorClass = "bg-[#b84a32] shadow-[0_0_6px_#b84a32]";
+                        }
+                      } else if (isLedInCenterZone) {
+                        barColorClass = "bg-[#18301d]/60";
+                      }
+                      
+                      return (
+                        <div
+                          key={i}
+                          className={`h-3 flex-grow rounded-[1px] transition-all duration-100 ${barColorClass}`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Numeric Readings Dashboard */}
+                <div className="flex justify-center gap-6 text-[11px] text-[#7a6a58] font-mono border-t border-b border-[#4a3828]/40 py-2.5 mb-5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[#c8b8a4]">Diff:</span>
+                    <span className={`font-black tracking-tight ${tunerNote === "-" ? "text-[#7a6a58]" : Math.abs(tunerCents) <= 3 ? "text-[#4a9e5c]" : "text-[#d4943c]"}`}>
+                      {tunerNote === "-" ? "--" : tunerCents > 0 ? `+${tunerCents} ct` : `${tunerCents} ct`}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-[#c8b8a4]">Frequenz:</span>{" "}
-                    <span className="font-extrabold text-[#d4943c]">
-                      {tunerHz > 0 ? `${tunerHz} Hz` : "-"}
+                  <div className="w-[1px] bg-[#4a3828]/40 h-3" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[#c8b8a4]">Frequenz:</span>
+                    <span className="font-bold text-[#d4943c]">
+                      {tunerHz > 0 ? `${tunerHz.toFixed(1)} Hz` : "--- Hz"}
                     </span>
                   </div>
                 </div>
@@ -3969,11 +4494,11 @@ export default function App() {
       </div>
 
       {/* Persistent Audio Rack Controller Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-[#2a1e10] border-t-2 border-[#4a3828] z-40 select-none shadow-[0_-12px_35px_rgba(0,0,0,0.95)] pb-4 md:pb-6 transition-all duration-300">
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#2a1e10] border-t-2 border-[#4a3828] z-40 select-none shadow-[0_-12px_35px_rgba(0,0,0,0.95)] transition-all duration-300 max-h-[92vh] flex flex-col pb-2 md:pb-4">
         {/* Full-width elegant click-to-minimize console title bar */}
         <div 
           onClick={() => setIsFooterMinimized(!isFooterMinimized)}
-          className="bg-[#1a1008] border-b border-[#4a3828] px-4 py-2.5 flex items-center justify-between cursor-pointer hover:bg-[#22160d] transition-all"
+          className="bg-[#1a1008] border-b border-[#4a3828] px-4 py-2 flex items-center justify-between cursor-pointer hover:bg-[#22160d] transition-all shrink-0 select-none"
           title="Klicken, um die Konsole zu minimieren/maximieren"
         >
           {/* Mock Console Windows Control Dots on Left */}
@@ -3998,7 +4523,7 @@ export default function App() {
           {/* Console designation */}
           <div className="flex items-center gap-2 text-[10px] sm:text-xs font-mono font-extrabold text-[#d4943c] tracking-widest uppercase">
             <span className="animate-pulse">🔴</span>
-            <span>DSP CONSOLE & CHROMATIC SEQUENCER</span>
+            <span>QuintCircleStudio console and timeline sequencer</span>
             <span className="hidden md:inline text-[#7a6a58] font-normal lowercase tracking-normal">
               — {isFooterMinimized ? "klicken zum Maximieren ↗" : "klicken zum Minimieren ↘"}
             </span>
@@ -4024,7 +4549,7 @@ export default function App() {
           </button>
         </div>
 
-        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-4 relative">
+        <div className="max-w-5xl w-full mx-auto px-3 sm:px-4 md:px-6 pt-2 pb-2 relative overflow-y-auto flex-1 select-none">
 
           {isFooterMinimized ? (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-1.5">
@@ -4047,16 +4572,25 @@ export default function App() {
                   </span>
                   <span className="text-xs font-bold text-[#f0e0cc]">
                     {timeline.length} Akkorde • {bpm} BPM • {
-                      currentInst === "piano" ? "🎹 Piano" : 
-                      currentInst === "guitar" ? "🎸 Classical" : 
-                      currentInst === "guitar_acoustic" ? "🪕 Acoustic Steel" : 
-                      currentInst === "guitar_electric_clean" ? "🎸 Electric Clean" : 
-                      currentInst === "guitar_electric_dist" ? "⚡ Heavy Dist." : 
-                      currentInst === "sax" ? "🎷 Saxophon" : 
-                      currentInst === "djembe" ? "🪘 Djembe" : 
-                      currentInst === "ukulele" ? "🪕 Ukulele" : 
-                      currentInst === "strings" ? "🎻 Strings" : 
-                      currentInst === "synth" ? "🎛️ Synth" : "🎸 Bass"
+                      activeInstruments && activeInstruments.length > 0
+                        ? activeInstruments.map((id) => {
+                            if (id === "piano") return "🎹 Klavier";
+                            if (id === "guitar") return "🎸 Classical";
+                            if (id === "guitar_acoustic") return "🪕 Acoustic";
+                            if (id === "guitar_electric_clean") return "🎸 Elec Clean";
+                            if (id === "guitar_electric_dist") return "⚡ Heavy Dist.";
+                            if (id === "sax") return "🎷 Sax";
+                            if (id === "djembe") return "🪘 Djembe";
+                            if (id === "ukulele") return "🪕 Ukulele";
+                            if (id === "strings") return "🎻 Strings";
+                            if (id === "synth") return "🎛️ Synth";
+                            if (id === "bass") return "🎸 Bass";
+                            if (id === "trumpet") return "🎺 Trumpet";
+                            if (id === "accordion") return "🪗 Accordion";
+                            if (id === "tambura") return "🪕 Tambura";
+                            return id;
+                          }).join(" + ")
+                        : "Keine"
                     }
                   </span>
                 </div>
@@ -4144,38 +4678,78 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <div className="max-h-[64vh] sm:max-h-none overflow-y-auto pr-1.5 scrollbar-thin space-y-3 pb-2 md:pb-0">
+            <div className="space-y-2 sm:space-y-3 pb-2 md:pb-0">
               {/* Row 1: Sound Instruments */}
-              <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1.5 scrollbar-thin">
-                <span className="text-xs font-mono text-[#7a6a58] uppercase font-bold pr-1">
-                  Instrument:
-                </span>
-                {[
-                  { id: "piano", label: "Piano", icon: <Music size={12} /> },
-                  { id: "guitar", label: "Classical", icon: <Guitar size={12} /> },
-                  { id: "guitar_acoustic", label: "Acoustic Steel", icon: <Guitar size={12} className="text-[#f59e0b]" /> },
-                  { id: "guitar_electric_clean", label: "Electric Clean", icon: <Guitar size={12} className="text-cyan-400" /> },
-                  { id: "guitar_electric_dist", label: "Heavy Dist.", icon: <Guitar size={12} className="text-red-500" /> },
-                  { id: "sax", label: "Saxophon", icon: <Music size={12} className="text-yellow-500" /> },
-                  { id: "djembe", label: "Djembe", icon: <Drum size={12} /> },
-                  { id: "ukulele", label: "Ukulele", icon: <Sliders size={12} /> },
-                  { id: "strings", label: "Strings", icon: <Waves size={12} /> },
-                  { id: "synth", label: "Synth", icon: <SlidersHorizontal size={12} /> },
-                  { id: "bass", label: "Bass", icon: <Volume2 size={12} /> }
-                ].map((inst) => (
-                  <button
-                    key={inst.id}
-                    onClick={() => setCurrentInst(inst.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      currentInst === inst.id
-                        ? "bg-[#d4943c] text-[#1a1008] font-black animate-pulse"
-                        : "bg-[#1a1008] border border-[#4a3828] text-[#7a6a58] hover:text-[#f0e0cc]"
-                    }`}
-                  >
-                    {inst.icon}
-                    {inst.label}
-                  </button>
-                ))}
+              <div className="flex flex-col gap-1.5 mb-3">
+                {/* Row 1a: Acoustic & Folk Instruments */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-thin">
+                  <span className="text-[10px] font-mono text-[#7a6a58] uppercase font-bold pr-1 shrink-0">
+                    Akustisch:
+                  </span>
+                  {[
+                    { id: "piano", label: "Piano", icon: <Music size={11} /> },
+                    { id: "guitar", label: "Classical", icon: <Guitar size={11} /> },
+                    { id: "guitar_acoustic", label: "Acoustic Steel", icon: <Guitar size={11} className="text-[#f59e0b]" /> },
+                    { id: "accordion", label: "Akkordeon", icon: <Sliders size={11} className="text-orange-400" /> },
+                    { id: "tambura", label: "Tambura", icon: <Guitar size={11} className="text-amber-500" /> },
+                    { id: "strings", label: "Strings", icon: <Waves size={11} /> },
+                    { id: "ukulele", label: "Ukulele", icon: <Sliders size={11} /> }
+                  ].map((inst) => {
+                    const isActive = activeInstruments.includes(inst.id);
+                    return (
+                      <button
+                        key={inst.id}
+                        id={`inst-${inst.id}`}
+                        onClick={() => toggleInstrument(inst.id)}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                          isActive
+                            ? "bg-[#d4943c] text-[#1a1008] font-black shadow-[0_2px_8px_rgba(212,148,60,0.25)] ring-1 ring-[#d4943c]/30"
+                            : "bg-[#1a1008] border border-[#4a3828]/60 text-[#7a6a58] hover:text-[#f0e0cc]"
+                        }`}
+                        title={isActive ? "Deaktivieren" : "Aktivieren"}
+                      >
+                        {inst.icon}
+                        <span>{inst.label}</span>
+                        {isActive && <span className="ml-0.5 text-[8.5px] text-[#1a1008]">✔</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Row 1b: Band, Wind & Electronic Instruments */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                  <span className="text-[10px] font-mono text-[#7a6a58] uppercase font-bold pr-1 shrink-0">
+                    Band/Synth:
+                  </span>
+                  {[
+                    { id: "guitar_electric_clean", label: "Electric Clean", icon: <Guitar size={11} className="text-cyan-400" /> },
+                    { id: "guitar_electric_dist", label: "Heavy Dist.", icon: <Guitar size={11} className="text-red-500" /> },
+                    { id: "sax", label: "Saxophon", icon: <Music size={11} className="text-yellow-500" /> },
+                    { id: "trumpet", label: "Trompete", icon: <Volume2 size={11} className="text-amber-400" /> },
+                    { id: "djembe", label: "Djembe", icon: <Drum size={11} /> },
+                    { id: "synth", label: "Synth", icon: <SlidersHorizontal size={11} /> },
+                    { id: "bass", label: "Bass", icon: <Volume2 size={11} /> }
+                  ].map((inst) => {
+                    const isActive = activeInstruments.includes(inst.id);
+                    return (
+                      <button
+                        key={inst.id}
+                        id={`inst-${inst.id}`}
+                        onClick={() => toggleInstrument(inst.id)}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                          isActive
+                            ? "bg-[#d4943c] text-[#1a1008] font-black shadow-[0_2px_8px_rgba(212,148,60,0.25)] ring-1 ring-[#d4943c]/30"
+                            : "bg-[#1a1008] border border-[#4a3828]/60 text-[#7a6a58] hover:text-[#f0e0cc]"
+                        }`}
+                        title={isActive ? "Deaktivieren" : "Aktivieren"}
+                      >
+                        {inst.icon}
+                        <span>{inst.label}</span>
+                        {isActive && <span className="ml-0.5 text-[8.5px] text-[#1a1008]">✔</span>}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Row 2: Transport & Metronome BPM & Strum Options */}
@@ -4309,8 +4883,8 @@ export default function App() {
                         onClick={() => setBpm(b)}
                         className={`text-[9px] px-1.5 py-0.5 rounded-md border text-center transition-all cursor-pointer ${
                           bpm === b
-                            ? "bg-[#d4943c]/20 border-[#d4943c] text-[#d4943c] font-black"
-                            : "bg-[#1a1008] border-[#4a3828] text-[#7a6a58]"
+                            ? "bg-[#d4943c]/25 border-[#d4943c] text-[#d4943c] font-black"
+                            : "bg-[#1a1008] border-[#4a3828]/60 text-[#7a6a58] hover:text-[#c8b8a4]"
                         }`}
                       >
                         {b}
@@ -4320,303 +4894,366 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Row 3: Advanced Drum & Bass & FX Rhythm Configs (Slick iOS Channel Strip Layout) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-4 pb-3 border-b border-[#4a3828]/40">
+              {/* Row 3: Advanced Drum & Bass & FX Rhythm Configs (Collapsible Space-Saving Layout) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-3 pb-2 border-b border-[#4a3828]/40 shrink-0">
                 {/* Channel Strip 1: Drums System */}
-                <div className="bg-[#1f130a] border border-[#4a3828]/50 p-3 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-inner">
-                  <div className="flex items-center gap-3 shrink-0 justify-between md:justify-start">
-                    <div className="flex items-center gap-3">
+                <div className="bg-[#1f130a] border border-[#4a3828]/50 p-2 sm:p-2.5 rounded-xl flex flex-col justify-between gap-1.5 shadow-inner transition-all duration-300">
+                  {/* Drums Header Row */}
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
                       {/* iOS style Toggle Switch */}
                       <button
-                        onClick={() => setDrumsOn(!drumsOn)}
-                        className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer relative flex items-center shrink-0 ${
+                        onClick={() => {
+                          initAudio();
+                          setDrumsOn(!drumsOn);
+                        }}
+                        className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer relative flex items-center shrink-0 ${
                           drumsOn ? "bg-[#4a9e5c]" : "bg-[#120a04] border border-[#4a3828]/60"
                         }`}
+                        title="Drums an/aus"
                       >
                         <motion.div
                           layout
                           transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                          className="w-5 h-5 rounded-full bg-white shadow-md"
-                          style={{ x: drumsOn ? 20 : 0 }}
+                          className="w-4 h-4 rounded-full bg-white shadow-md"
+                          style={{ x: drumsOn ? 16 : 0 }}
                         />
                       </button>
-                      <div className="text-left font-semibold">
-                        <span className="block text-xs text-[#c8b8a4]">Schlagzeug (Drums)</span>
-                        <span className="block text-[10px] text-[#7a6a58] font-mono tracking-wide">
-                          STATUS: {drumsOn ? "ACTIVE" : "MUTED"}
+                      <div className="text-left select-none leading-none">
+                        <span className="block text-xs font-bold text-[#c8b8a4]">Drums</span>
+                        <span className="block text-[8px] sm:text-[9px] font-mono text-[#7a6a58] tracking-tight">
+                          {drumsOn ? `${DRUM_OPTIONS.find(o => o.id === drumPattern)?.icon || ""} ${DRUM_OPTIONS.find(o => o.id === drumPattern)?.label || ""} • ${Math.round(drumsVolume * 100)}%` : "MUTED"}
                         </span>
                       </div>
                     </div>
+
+                    {/* Quick Expand Slider Button */}
+                    <button
+                      onClick={() => setDrumsExpanded(!drumsExpanded)}
+                      className={`p-1 rounded-lg bg-[#120a04] hover:bg-[#22160d] border border-[#4a3828]/50 flex items-center justify-center transition-all cursor-pointer text-xs select-none ${
+                        drumsExpanded ? "text-[#d4943c] border-[#d4943c]/70" : "text-[#7a6a58]"
+                      }`}
+                      title={drumsExpanded ? "Details zuklappen" : "Details aufklappen"}
+                    >
+                      {drumsExpanded ? <ChevronUp size={12} className="stroke-[2.5]" /> : <Sliders size={12} className="stroke-[2.5]" />}
+                    </button>
                   </div>
 
-                  {/* Volume Slider Section & Extra Desktop Sliders */}
-                  <div className="flex flex-col gap-1.5 grow max-w-full md:max-w-[280px]">
-                    {/* Primary volume slider */}
-                    <div className="flex items-center gap-2 bg-[#120a04]/40 px-2.5 py-1.5 rounded-xl border border-[#4a3828]/30 w-full hover:border-[#d4943c]/35 transition-colors">
-                      <Volume2 size={12} className={drumsOn ? "text-[#d4943c]" : "text-neutral-600"} />
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.05"
-                        value={drumsVolume}
-                        onChange={(e) => setDrumsVolume(Number(e.target.value))}
-                        className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize md:h-1.5"
-                        disabled={!drumsOn}
-                        title="Hauptlautstärke Drums"
-                      />
-                      <span className="text-[10px] font-mono font-extrabold text-[#d4943c] w-6 text-right">
-                        {Math.round(drumsVolume * 100)}%
-                      </span>
-                    </div>
-
-                    {/* Desktop Pitch tuning slider */}
-                    <div className="flex items-center gap-2 bg-[#120a04]/40 px-2.5 py-1 rounded-xl border border-[#4a3828]/15 w-full hover:border-[#d4943c]/35 transition-colors">
-                      <span className="text-[9px] font-mono font-bold text-[#7a6a58] shrink-0 uppercase">Pitch:</span>
-                      <input
-                        type="range"
-                        min="0.5"
-                        max="2.0"
-                        step="0.05"
-                        value={drumsPitch}
-                        onChange={(e) => setDrumsPitch(Number(e.target.value))}
-                        className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize opacity-65 hover:opacity-100 transition-opacity"
-                        disabled={!drumsOn}
-                        title="Drums-Stimmung / Pitch-Tuning"
-                      />
-                      <span className="text-[9px] font-mono font-extrabold text-[#d4943c] w-7 text-right">
-                        {drumsPitch.toFixed(1)}x
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* iOS Style Segmented Control */}
-                  <div className="flex bg-[#120a04] p-0.5 rounded-xl border border-[#4a3828]/40 select-none overflow-x-auto scrollbar-none w-full md:w-auto relative gap-0.5 items-center">
-                    {DRUM_OPTIONS.map((opt) => {
-                      const isActive = drumPattern === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          onClick={() => setDrumPattern(opt.id)}
-                          className={`relative px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap z-10 shrink-0 ${
-                            isActive ? "text-[#1a1008] font-extrabold" : "text-[#7a6a58] hover:text-[#c8b8a4]"
-                          }`}
-                        >
-                          {isActive && (
-                            <motion.div
-                              layoutId="activeDrumPill"
-                              className="absolute inset-0 bg-[#d4943c] rounded-lg -z-10 shadow-[0_2px_8px_rgba(212,148,60,0.35)]"
-                              transition={{ type: "spring", stiffness: 400, damping: 35 }}
-                            />
-                          )}
-                          <span className="flex items-center gap-1.5">
-                            <span className="text-xs">{opt.icon}</span>
-                            <span>{opt.label}</span>
+                  {/* Drums Expanded settings */}
+                  {drumsExpanded && (
+                    <div className="w-full flex flex-col gap-2 pt-2 border-t border-[#4a3828]/25">
+                      {/* Volume Slider Section */}
+                      <div className="flex flex-col gap-1.5 w-full">
+                        {/* Primary volume slider */}
+                        <div className="flex items-center gap-2 bg-[#120a04]/40 px-2 py-1 rounded-xl border border-[#4a3828]/35 w-full hover:border-[#d4943c]/35 transition-colors">
+                          <Volume2 size={11} className={drumsOn ? "text-[#d4943c]" : "text-neutral-600"} />
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={drumsVolume}
+                            onChange={(e) => setDrumsVolume(Number(e.target.value))}
+                            className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize"
+                            disabled={!drumsOn}
+                            title="Hauptlautstärke Drums"
+                          />
+                          <span className="text-[9px] font-mono font-extrabold text-[#d4943c] w-6 text-right shrink-0">
+                            {Math.round(drumsVolume * 100)}%
                           </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                        </div>
+
+                        {/* Desktop Pitch tuning slider */}
+                        <div className="flex items-center gap-2 bg-[#120a04]/40 px-2 py-1 rounded-xl border border-[#4a3828]/15 w-full hover:border-[#d4943c]/35 transition-colors">
+                          <span className="text-[8px] font-mono font-bold text-[#7a6a58] shrink-0 uppercase">Pitch:</span>
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="2.0"
+                            step="0.05"
+                            value={drumsPitch}
+                            onChange={(e) => setDrumsPitch(Number(e.target.value))}
+                            className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize opacity-65 hover:opacity-100 transition-opacity"
+                            disabled={!drumsOn}
+                            title="Drums-Stimmung / Pitch-Tuning"
+                          />
+                          <span className="text-[9px] font-mono font-extrabold text-[#d4943c] w-6 text-right shrink-0">
+                            {drumsPitch.toFixed(1)}x
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* iOS Style Segmented Control */}
+                      <div className="flex bg-[#120a04] p-0.5 rounded-lg border border-[#4a3828]/40 select-none overflow-x-auto scrollbar-none w-full relative gap-0.5 items-center">
+                        {DRUM_OPTIONS.map((opt) => {
+                          const isActive = drumPattern === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              onClick={() => setDrumPattern(opt.id)}
+                              className={`relative px-1.5 py-1 rounded-md text-[9px] font-bold transition-all cursor-pointer whitespace-nowrap z-10 shrink-0 ${
+                                isActive ? "text-[#1a1008] font-extrabold" : "text-[#7a6a58] hover:text-[#c8b8a4]"
+                              }`}
+                            >
+                              {isActive && (
+                                <motion.div
+                                  layoutId="activeDrumPill"
+                                  className="absolute inset-0 bg-[#d4943c] rounded-md sm:rounded-lg -z-10 shadow-[0_2px_8px_rgba(212,148,60,0.35)]"
+                                  transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                                />
+                              )}
+                              <span className="flex items-center gap-1">
+                                <span className="text-xs">{opt.icon}</span>
+                                <span>{opt.label}</span>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Channel Strip 2: Bass System */}
-                <div className="bg-[#1f130a] border border-[#4a3828]/50 p-3 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-inner">
-                  <div className="flex items-center gap-3 shrink-0 justify-between md:justify-start">
-                    <div className="flex items-center gap-3">
+                <div className="bg-[#1f130a] border border-[#4a3828]/50 p-2 sm:p-2.5 rounded-xl flex flex-col justify-between gap-1.5 shadow-inner transition-all duration-300">
+                  {/* Bass Header Row */}
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
                       {/* iOS style Toggle Switch */}
                       <button
-                        onClick={() => setBasslineOn(!basslineOn)}
-                        className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer relative flex items-center shrink-0 ${
+                        onClick={() => {
+                          initAudio();
+                          setBasslineOn(!basslineOn);
+                        }}
+                        className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer relative flex items-center shrink-0 ${
                           basslineOn ? "bg-[#4a9e5c]" : "bg-[#120a04] border border-[#4a3828]/60"
                         }`}
+                        title="Bass an/aus"
                       >
                         <motion.div
                           layout
                           transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                          className="w-5 h-5 rounded-full bg-white shadow-md"
-                          style={{ x: basslineOn ? 20 : 0 }}
+                          className="w-4 h-4 rounded-full bg-white shadow-md"
+                          style={{ x: basslineOn ? 16 : 0 }}
                         />
                       </button>
-                      <div className="text-left font-semibold">
-                        <span className="block text-xs text-[#c8b8a4]">Bass-Line (Routine)</span>
-                        <span className="block text-[10px] text-[#7a6a58] font-mono tracking-wide">
-                          STATUS: {basslineOn ? "ACTIVE" : "MUTED"}
+                      <div className="text-left select-none leading-none">
+                        <span className="block text-xs font-bold text-[#c8b8a4]">Bass-Line</span>
+                        <span className="block text-[8px] sm:text-[9px] font-mono text-[#7a6a58] tracking-tight">
+                          {basslineOn ? `${BASS_OPTIONS.find(o => o.id === bassPattern)?.icon || ""} ${BASS_OPTIONS.find(o => o.id === bassPattern)?.label || ""} • ${Math.round(bassVolume * 100)}%` : "MUTED"}
                         </span>
                       </div>
                     </div>
+
+                    {/* Quick Expand Slider Button */}
+                    <button
+                      onClick={() => setBassExpanded(!bassExpanded)}
+                      className={`p-1 rounded-lg bg-[#120a04] hover:bg-[#22160d] border border-[#4a3828]/50 flex items-center justify-center transition-all cursor-pointer text-xs select-none ${
+                        bassExpanded ? "text-[#d4943c] border-[#d4943c]/70" : "text-[#7a6a58]"
+                      }`}
+                      title={bassExpanded ? "Details zuklappen" : "Details aufklappen"}
+                    >
+                      {bassExpanded ? <ChevronUp size={12} className="stroke-[2.5]" /> : <Sliders size={12} className="stroke-[2.5]" />}
+                    </button>
                   </div>
 
-                  {/* Volume Slider Section & Extra Desktop Sliders */}
-                  <div className="flex flex-col gap-1.5 grow max-w-full md:max-w-[280px]">
-                    {/* Primary volume slider */}
-                    <div className="flex items-center gap-2 bg-[#120a04]/40 px-2.5 py-1.5 rounded-xl border border-[#4a3828]/30 w-full hover:border-[#d4943c]/35 transition-colors">
-                      <Volume2 size={12} className={basslineOn ? "text-[#d4943c]" : "text-neutral-600"} />
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.05"
-                        value={bassVolume}
-                        onChange={(e) => setBassVolume(Number(e.target.value))}
-                        className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize md:h-1.5"
-                        disabled={!basslineOn}
-                        title="Hauptlautstärke Bass"
-                      />
-                      <span className="text-[10px] font-mono font-extrabold text-[#d4943c] w-6 text-right">
-                        {Math.round(bassVolume * 100)}%
-                      </span>
-                    </div>
-
-                    {/* Desktop Cutoff filter sweep slider */}
-                    <div className="flex items-center gap-2 bg-[#120a04]/40 px-2.5 py-1 rounded-xl border border-[#4a3828]/15 w-full hover:border-[#d4943c]/35 transition-colors">
-                      <span className="text-[9px] font-mono font-bold text-[#7a6a58] shrink-0 uppercase">Filter:</span>
-                      <input
-                        type="range"
-                        min="100"
-                        max="1200"
-                        step="10"
-                        value={bassFilterCutoff}
-                        onChange={(e) => setBassFilterCutoff(Number(e.target.value))}
-                        className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize opacity-65 hover:opacity-100 transition-opacity"
-                        disabled={!basslineOn}
-                        title="Bass Tiefpass Filter-Cutoff Frequenz"
-                      />
-                      <span className="text-[9px] font-mono font-extrabold text-[#d4943c] w-9 text-right truncate">
-                        {bassFilterCutoff}Hz
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* iOS Style Segmented Control */}
-                  <div className="flex bg-[#120a04] p-0.5 rounded-xl border border-[#4a3828]/40 select-none overflow-x-auto scrollbar-none w-full md:w-auto relative gap-0.5 items-center">
-                    {BASS_OPTIONS.map((opt) => {
-                      const isActive = bassPattern === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          onClick={() => setBassPattern(opt.id)}
-                          className={`relative px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap z-10 shrink-0 ${
-                            isActive ? "text-[#1a1008] font-extrabold" : "text-[#7a6a58] hover:text-[#c8b8a4]"
-                          }`}
-                        >
-                          {isActive && (
-                            <motion.div
-                              layoutId="activeBassPill"
-                              className="absolute inset-0 bg-[#d4943c] rounded-lg -z-10 shadow-[0_2px_8px_rgba(212,148,60,0.35)]"
-                              transition={{ type: "spring", stiffness: 400, damping: 35 }}
-                            />
-                          )}
-                          <span className="flex items-center gap-1.5">
-                            <span className="text-xs">{opt.icon}</span>
-                            <span>{opt.label}</span>
+                  {/* Bass Expanded settings */}
+                  {bassExpanded && (
+                    <div className="w-full flex flex-col gap-2 pt-2 border-t border-[#4a3828]/25">
+                      {/* Volume Slider Section */}
+                      <div className="flex flex-col gap-1.5 w-full">
+                        {/* Primary volume slider */}
+                        <div className="flex items-center gap-2 bg-[#120a04]/40 px-2 py-1 rounded-xl border border-[#4a3828]/35 w-full hover:border-[#d4943c]/35 transition-colors">
+                          <Volume2 size={11} className={basslineOn ? "text-[#d4943c]" : "text-neutral-600"} />
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={bassVolume}
+                            onChange={(e) => setBassVolume(Number(e.target.value))}
+                            className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize"
+                            disabled={!basslineOn}
+                            title="Hauptlautstärke Bass"
+                          />
+                          <span className="text-[9px] font-mono font-extrabold text-[#d4943c] w-6 text-right shrink-0">
+                            {Math.round(bassVolume * 100)}%
                           </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                        </div>
+
+                        {/* Cutoff filter sweep slider */}
+                        <div className="flex items-center gap-2 bg-[#120a04]/40 px-2 py-1 rounded-xl border border-[#4a3828]/15 w-full hover:border-[#d4943c]/35 transition-colors">
+                          <span className="text-[8px] font-mono font-bold text-[#7a6a58] shrink-0 uppercase">Filter:</span>
+                          <input
+                            type="range"
+                            min="100"
+                            max="1200"
+                            step="10"
+                            value={bassFilterCutoff}
+                            onChange={(e) => setBassFilterCutoff(Number(e.target.value))}
+                            className="w-full h-1 bg-[#2a1e10] rounded-lg border-none accent-[#d4943c] cursor-ew-resize opacity-65 hover:opacity-100 transition-opacity"
+                            disabled={!basslineOn}
+                            title="Bass Tiefpass Filter-Cutoff"
+                          />
+                          <span className="text-[9px] font-mono font-extrabold text-[#d4943c] w-9 text-right shrink-0 truncate">
+                            {bassFilterCutoff}Hz
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* iOS Style Segmented Control */}
+                      <div className="flex bg-[#120a04] p-0.5 rounded-lg border border-[#4a3828]/40 select-none overflow-x-auto scrollbar-none w-full relative gap-0.5 items-center">
+                        {BASS_OPTIONS.map((opt) => {
+                          const isActive = bassPattern === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              onClick={() => setBassPattern(opt.id)}
+                              className={`relative px-1.5 py-1 rounded-md text-[9px] font-bold transition-all cursor-pointer whitespace-nowrap z-10 shrink-0 ${
+                                isActive ? "text-[#1a1008] font-extrabold" : "text-[#7a6a58] hover:text-[#c8b8a4]"
+                              }`}
+                            >
+                              {isActive && (
+                                <motion.div
+                                  layoutId="activeBassPill"
+                                  className="absolute inset-0 bg-[#d4943c] rounded-md sm:rounded-lg -z-10 shadow-[0_2px_8px_rgba(212,148,60,0.35)]"
+                                  transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                                />
+                              )}
+                              <span className="flex items-center gap-1">
+                                <span className="text-xs">{opt.icon}</span>
+                                <span>{opt.label}</span>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Channel Strip 3: DSP Pedalboard Rack (Stomp Switches for Mobile) */}
-                <div className="bg-[#1f130a] border border-[#4a3828]/50 p-3 rounded-2xl flex flex-col justify-between gap-2.5 shadow-inner md:col-span-2 xl:col-span-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-[#c8b8a4] flex items-center gap-1.5">
-                      <Sliders size={13} className="text-[#d4943c] animate-pulse" /> DSP-Quickboard
-                    </span>
-                    <span className="text-[9px] font-mono text-[#7a6a58] font-bold tracking-widest leading-none">
-                      STATUS: {
-                        pedalboard.overdrive.active || pedalboard.chorus.active || pedalboard.delay.active || pedalboard.reverb.active
-                          ? "FX-ACTIVE"
-                          : "FX-BYPASS"
-                      }
-                    </span>
+                {/* Channel Strip 3: DSP Pedalboard Rack */}
+                <div className="bg-[#1f130a] border border-[#4a3828]/50 p-2 sm:p-2.5 rounded-xl flex flex-col justify-between gap-1.5 shadow-inner transition-all duration-300 md:col-span-2 lg:col-span-1">
+                  {/* DSP Header Row */}
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-[#c8b8a4] flex items-center gap-1">
+                        <Sliders size={12} className="text-[#d4943c] animate-pulse shrink-0" /> DSP
+                      </span>
+                      <span className="text-[8px] sm:text-[9.5px] font-mono text-[#7a6a58] leading-none tracking-tight">
+                        {pedalboard.overdrive.active || pedalboard.chorus.active || pedalboard.delay.active || pedalboard.reverb.active
+                          ? `[ ${[
+                              pedalboard.overdrive.active && "Drive",
+                              pedalboard.chorus.active && "Chorus",
+                              pedalboard.delay.active && "Delay",
+                              pedalboard.reverb.active && "Reverb"
+                            ].filter(Boolean).join(", ")} ]`
+                          : "BYPASS"}
+                      </span>
+                    </div>
+
+                    {/* Quick Expand Slider Button */}
+                    <button
+                      onClick={() => setDspExpanded(!dspExpanded)}
+                      className={`p-1 rounded-lg bg-[#120a04] hover:bg-[#22160d] border border-[#4a3828]/50 flex items-center justify-center transition-all cursor-pointer text-xs select-none ${
+                        dspExpanded ? "text-[#d4943c] border-[#d4943c]/70" : "text-[#7a6a58]"
+                      }`}
+                      title={dspExpanded ? "FX einklappen" : "FX ausklappen"}
+                    >
+                      {dspExpanded ? <ChevronUp size={12} className="stroke-[2.5]" /> : <Sliders size={12} className="stroke-[2.5]" />}
+                    </button>
                   </div>
 
-                  {/* 4 neon status stomp buttons */}
-                  <div className="grid grid-cols-4 gap-1.5 my-0.5">
-                    {[
-                      { 
-                        id: "overdrive", 
-                        label: "Drive", 
-                        glowColor: "bg-amber-500 shadow-[0_0_8px_#f59e0b]",
-                        active: pedalboard.overdrive.active,
-                        toggle: () => setPedalboard(prev => ({ ...prev, overdrive: { ...prev.overdrive, active: !prev.overdrive.active } }))
-                      },
-                      { 
-                        id: "chorus", 
-                        label: "Chorus", 
-                        glowColor: "bg-blue-400 shadow-[0_0_8px_#3b82f6]",
-                        active: pedalboard.chorus.active,
-                        toggle: () => setPedalboard(prev => ({ ...prev, chorus: { ...prev.chorus, active: !prev.chorus.active } }))
-                      },
-                      { 
-                        id: "delay", 
-                        label: "Delay", 
-                        glowColor: "bg-emerald-400 shadow-[0_0_8px_#10b981]",
-                        active: pedalboard.delay.active,
-                        toggle: () => setPedalboard(prev => ({ ...prev, delay: { ...prev.delay, active: !prev.delay.active } }))
-                      },
-                      { 
-                        id: "reverb", 
-                        label: "Reverb", 
-                        glowColor: "bg-purple-400 shadow-[0_0_8px_#a855f7]",
-                        active: pedalboard.reverb.active,
-                        toggle: () => setPedalboard(prev => ({ ...prev, reverb: { ...prev.reverb, active: !prev.reverb.active } }))
-                      }
-                    ].map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={() => {
-                          initAudio();
-                          p.toggle();
-                        }}
-                        className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-[9px] font-bold transition-all cursor-pointer border ${
-                          p.active 
-                            ? "bg-[#120a04] border-[#d4943c] text-white font-extrabold"
-                            : "bg-[#120a04]/40 border-[#4a3828]/45 text-[#7a6a58] hover:text-[#c8b8a4]"
-                        }`}
-                      >
-                        <div className={`w-2.5 h-2.5 rounded-full mb-1 transition-all ${p.active ? p.glowColor : "bg-neutral-800"}`} />
-                        <span className="text-[8px] font-mono uppercase tracking-tighter">{p.label}</span>
-                      </button>
-                    ))}
-                  </div>
+                  {/* DSP Expanded settings */}
+                  {dspExpanded && (
+                    <div className="w-full flex flex-col gap-2 pt-2 border-t border-[#4a3828]/25">
+                      {/* 4 neon status stomp buttons */}
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {[
+                          { 
+                            id: "overdrive", 
+                            label: "Drive", 
+                            glowColor: "bg-amber-500 shadow-[0_0_8px_#f59e0b]",
+                            active: pedalboard.overdrive.active,
+                            toggle: () => setPedalboard(prev => ({ ...prev, overdrive: { ...prev.overdrive, active: !prev.overdrive.active } }))
+                          },
+                          { 
+                            id: "chorus", 
+                            label: "Chorus", 
+                            glowColor: "bg-blue-400 shadow-[0_0_8px_#3b82f6]",
+                            active: pedalboard.chorus.active,
+                            toggle: () => setPedalboard(prev => ({ ...prev, chorus: { ...prev.chorus, active: !prev.chorus.active } }))
+                          },
+                          { 
+                            id: "delay", 
+                            label: "Delay", 
+                            glowColor: "bg-emerald-400 shadow-[0_0_8px_#10b981]",
+                            active: pedalboard.delay.active,
+                            toggle: () => setPedalboard(prev => ({ ...prev, delay: { ...prev.delay, active: !prev.delay.active } }))
+                          },
+                          { 
+                            id: "reverb", 
+                            label: "Reverb", 
+                            glowColor: "bg-purple-400 shadow-[0_0_8px_#a855f7]",
+                            active: pedalboard.reverb.active,
+                            toggle: () => setPedalboard(prev => ({ ...prev, reverb: { ...prev.reverb, active: !prev.reverb.active } }))
+                          }
+                        ].map((p) => (
+                          <button
+                            key={p.id}
+                            onClick={() => {
+                              initAudio();
+                              p.toggle();
+                            }}
+                            className={`flex flex-col items-center justify-center py-1 sm:py-1.5 px-0.5 rounded-lg text-[9px] font-bold transition-all cursor-pointer border ${
+                              p.active 
+                                ? "bg-[#120a04] border-[#d4943c] text-white font-extrabold"
+                                : "bg-[#120a04]/40 border-[#4a3828]/45 text-[#7a6a58] hover:text-[#c8b8a4]"
+                            }`}
+                          >
+                            <div className={`w-1.5 h-1.5 rounded-full mb-0.5 transition-all ${p.active ? p.glowColor : "bg-neutral-800"}`} />
+                            <span className="text-[7.5px] font-mono uppercase tracking-tighter">{p.label}</span>
+                          </button>
+                        ))}
+                      </div>
 
-                  {/* Rig selection inside channel strip */}
-                  <div className="flex bg-[#120a04] p-0.5 rounded-xl border border-[#4a3828]/40 select-none overflow-x-auto scrollbar-none relative gap-0.5 items-center">
-                    <span className="text-[8px] font-mono text-[#5f4e3c] px-1.5 font-bold uppercase shrink-0">Rig:</span>
-                    {FX_PRESETS.reduce<any[]>((acc, cur) => {
-                      // Avoid too many items in this tiny footer bar, let's keep it clean
-                      if (cur.id !== "heavy_lead") {
-                        acc.push(cur);
-                      }
-                      return acc;
-                    }, []).map((p: any) => {
-                      const isCurrent = (
-                        pedalboard.overdrive.active === p.settings.overdrive.active &&
-                        pedalboard.chorus.active === p.settings.chorus.active &&
-                        pedalboard.delay.active === p.settings.delay.active &&
-                        pedalboard.reverb.active === p.settings.reverb.active
-                      );
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => applyFxPreset(p.id)}
-                          className={`relative px-1.5 py-1 rounded-lg text-[9px] font-mono font-bold transition-all cursor-pointer whitespace-nowrap z-10 shrink-0 ${
-                            isCurrent ? "text-[#1a1008] font-extrabold" : "text-[#7a6a58] hover:text-[#c8b8a4]"
-                          }`}
-                        >
-                          {isCurrent && (
-                            <motion.div
-                              layoutId="activeFxPillFooter"
-                              className="absolute inset-0 bg-[#d4943c] rounded-lg -z-10 shadow-[0_1px_5px_rgba(212,148,60,0.35)]"
-                              transition={{ type: "spring", stiffness: 400, damping: 35 }}
-                            />
-                          )}
-                          <span>{p.icon} {p.name.replace("Dry ", "").replace("Surf ", "")}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                      {/* Rig selection inside channel strip */}
+                      <div className="flex bg-[#120a04] p-0.5 rounded-lg border border-[#4a3828]/40 select-none overflow-x-auto scrollbar-none relative gap-0.5 items-center">
+                        <span className="text-[8px] font-mono text-[#5f4e3c] px-1 sm:px-1.5 font-bold uppercase shrink-0">Rig:</span>
+                        {FX_PRESETS.reduce<any[]>((acc, cur) => {
+                          if (cur.id !== "heavy_lead") {
+                            acc.push(cur);
+                          }
+                          return acc;
+                        }, []).map((p: any) => {
+                          const isCurrent = (
+                            pedalboard.overdrive.active === p.settings.overdrive.active &&
+                            pedalboard.chorus.active === p.settings.chorus.active &&
+                            pedalboard.delay.active === p.settings.delay.active &&
+                            pedalboard.reverb.active === p.settings.reverb.active
+                          );
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => applyFxPreset(p.id)}
+                              className={`relative px-1 sm:px-1.5 py-0.5 sm:py-1 rounded-md sm:rounded-lg text-[8.5px] sm:text-[9px] font-mono font-bold transition-all cursor-pointer whitespace-nowrap z-10 shrink-0 ${
+                                isCurrent ? "text-[#1a1008] font-extrabold" : "text-[#7a6a58] hover:text-[#c8b8a4]"
+                              }`}
+                            >
+                              {isCurrent && (
+                                <motion.div
+                                  layoutId="activeFxPillFooter"
+                                  className="absolute inset-0 bg-[#d4943c] rounded-md sm:rounded-lg -z-10 shadow-[0_1px_5px_rgba(212,148,60,0.35)]"
+                                  transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                                />
+                              )}
+                              <span>{p.icon} {p.name.replace("Dry ", "").replace("Surf ", "")}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
