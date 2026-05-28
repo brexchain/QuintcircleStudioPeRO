@@ -29,7 +29,8 @@ import {
   ChevronUp,
   X,
   Sun,
-  Moon
+  Moon,
+  Disc
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -3169,13 +3170,18 @@ export default function App() {
       <div className="relative z-10 max-w-5xl mx-auto px-4 md:px-6 pt-6">
         {/* Header */}
         <header className="flex flex-col md:flex-row items-center justify-between mb-8 pb-4 border-b border-[#4a3828]/40 gap-4">
-          <div className="text-center md:text-left">
-            <h1 className="text-3xl font-black tracking-tight text-[#d4943c] font-serif pr-2">
-              QuintcircleStudioPeRO
-            </h1>
-            <p className="text-xs text-[#7a6a58] font-mono tracking-wider uppercase mt-1">
-              Songwriter's Toolkit & Circle of Fifths
-            </p>
+          <div className="text-center md:text-left flex items-center justify-center md:justify-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4943c] to-[#a0681c] flex items-center justify-center text-[#1a1008] shadow-[0_4px_12px_rgba(212,148,60,0.25)] ring-1 ring-[#d4943c]/30 shrink-0">
+              <Disc size={22} className="animate-[spin_10s_linear_infinite]" />
+            </div>
+            <div className="text-left">
+              <h1 className="text-3xl font-black tracking-tight text-[#d4943c] font-serif pr-2 leading-none">
+                QuintCircleStudio
+              </h1>
+              <p className="text-xs text-[#7a6a58] font-mono tracking-wider uppercase mt-1">
+                Songwriter's Toolkit & Circle of Fifths
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             <button
